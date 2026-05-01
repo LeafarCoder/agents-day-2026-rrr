@@ -26,7 +26,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${playfair.variable} ${dmSans.variable}`}>
+    <html lang="en" className={`${playfair.variable} ${dmSans.variable}`} suppressHydrationWarning>
       <head>
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>" />
         <meta name="talentapp:project_verification" content="e61507ae63ba67db86acb8c5da40d3cc7bae6d99a793d886eb867d5f63cfbaf736fe65ffaff497410e7b9902500ff1116c74fef85422afc53420a75fb7137c5a" />
