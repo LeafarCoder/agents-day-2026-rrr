@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Travel Preference Scraper</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 600px; margin: 80px auto; padding: 0 24px; color: #1a1a1a; }
+    h1   { font-size: 2rem; margin-bottom: 8px; }
+    p    { color: #555; line-height: 1.6; }
+    .btn { display: inline-block; margin-top: 32px; padding: 14px 28px; background: #4285f4; color: #fff; text-decoration: none; border-radius: 6px; font-size: 1rem; font-weight: 600; }
+    .btn:hover { background: #3367d6; }
+    .btn.secondary { background: #e8eaed; color: #444; margin-left: 12px; }
+    .btn.secondary:hover { background: #dadce0; }
+    .tag { display: inline-block; background: #e8f0fe; color: #1a73e8; border-radius: 4px; padding: 2px 8px; font-size: 0.85rem; margin: 4px 2px; }
+    nav  { margin-bottom: 32px; font-size: 0.9rem; }
+    nav a { color: #4285f4; text-decoration: none; margin-right: 16px; }
+  </style>
+</head>
+<body>
+  <nav><a href="/">Home</a><a href="/preferences">Manage Categories</a></nav>
+  <h1>Travel Preference Scraper</h1>
+  <p>Connect your Gmail and we'll scan booking confirmation emails from Airbnb, Booking.com, Ryanair, Viator, and 30+ other travel brands to build your preference profile automatically.</p>
+  <p>
+    <span class="tag">Read-only access</span>
+    <span class="tag">Last 6 months only</span>
+    <span class="tag">Nothing stored server-side</span>
+  </p>
+  {% if connected %}
+    <a href="/scan" class="btn">Scan my Gmail</a>
+    <a href="/disconnect" class="btn secondary">Disconnect</a>
+  {% else %}
+    <a href="/auth" class="btn">Connect Gmail</a>
+  {% endif %}
+</body>
+</html>

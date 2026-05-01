@@ -1,0 +1,10 @@
+{
+  "name": "bplanner",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start:frontend": "pnpm --filter bplanner-frontend start",
+    "start:backend": "pnpm --filter bplanner-backend start",
+    "start": "pnpm run start:backend & pnpm run start:frontend"
+  }
+}

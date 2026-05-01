@@ -1,0 +1,10 @@
+credentials.json
+token.json
+seed_token.json
+seed_credentials.json
+.venv/
+venv/
+*.pyc
+__pycache__/
+.env
+.claude/

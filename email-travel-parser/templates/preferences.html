@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manage Categories</title>
+  <style>
+    body  { font-family: system-ui, sans-serif; max-width: 860px; margin: 48px auto; padding: 0 24px; color: #1a1a1a; }
+    h1    { font-size: 2rem; margin-bottom: 4px; }
+    h2    { font-size: 1rem; text-transform: uppercase; letter-spacing: .05em; color: #555; margin-top: 40px; border-bottom: 1px solid #eee; padding-bottom: 6px; }
+    nav   { margin-bottom: 32px; font-size: 0.9rem; }
+    nav a { color: #4285f4; text-decoration: none; margin-right: 16px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-top: 16px; }
+    .card { background: #f8f9fa; border-radius: 8px; padding: 16px; }
+    .card h3 { margin: 0 0 10px; font-size: 0.95rem; color: #1a73e8; }
+    .pill { display: inline-block; background: #e8f0fe; color: #174ea6; border-radius: 20px; padding: 3px 10px; font-size: 0.8rem; margin: 2px; }
+    form.inline { display: flex; gap: 8px; margin-top: 12px; }
+    input[type=text] { flex: 1; padding: 8px 12px; border: 1px solid #dadce0; border-radius: 6px; font-size: 0.9rem; }
+    input[type=text]:focus { outline: none; border-color: #4285f4; }
+    select { padding: 8px 12px; border: 1px solid #dadce0; border-radius: 6px; font-size: 0.9rem; background: #fff; }
+    button { padding: 8px 16px; background: #4285f4; color: #fff; border: none; border-radius: 6px; font-size: 0.9rem; cursor: pointer; }
+    button:hover { background: #3367d6; }
+    .section { background: #fff; border: 1px solid #e8eaed; border-radius: 10px; padding: 20px; margin-top: 24px; }
+  </style>
+</head>
+<body>
+  <nav><a href="/">Home</a><a href="/preferences">Manage Categories</a></nav>
+  <h1>Manage Categories &amp; Keywords</h1>
+  <p style="color:#555;">Add new activity categories or keywords used to detect travel preferences from emails.</p>
+
+  <div class="section">
+    <h2>Add a new category</h2>
+    <form class="inline" action="/preferences/categories" method="post">
+      <input type="text" name="name" placeholder="e.g. water_sports" required />
+      <button type="submit">Add category</button>
+    </form>
+  </div>
+
+  <div class="section">
+    <h2>Add a keyword to a category</h2>
+    <form class="inline" action="/preferences/keywords" method="post">
+      <select name="category">
+        {% for cat in signals.keys() %}
+          <option value="{{ cat }}">{{ cat.replace('_', ' ').title() }}</option>
+        {% endfor %}
+      </select>
+      <input type="text" name="keyword" placeholder="e.g. snorkeling" required />
+      <button type="submit">Add keyword</button>
+    </form>
+  </div>
+
+  <h2>Current categories &amp; keywords</h2>
+  <div class="grid">
+    {% for cat, keywords in signals.items() %}
+    <div class="card">
+      <h3>{{ cat.replace('_', ' ').title() }}</h3>
+      {% for kw in keywords %}
+        <span class="pill">{{ kw }}</span>
+      {% endfor %}
+      {% if not keywords %}
+        <span style="color:#aaa;font-size:0.85rem;">No keywords yet</span>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</body>
+</html>
