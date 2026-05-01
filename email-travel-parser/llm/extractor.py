@@ -45,7 +45,7 @@ Respond with valid JSON only — no markdown fences, no commentary.\
 """
 
 
-_BOOKING_KEYS  = {"destination_city", "destination_country", "country_code", "booking_type"}
+_BOOKING_KEYS  = {"destination_city", "destination_country", "country_code", "booking_type", "categories", "keyword_hits"}
 _PROFILE_KEYS  = {"taste_summary", "preferences"}
 
 
@@ -130,21 +130,44 @@ Return a JSON object with exactly these fields:
   "country_code": "<ISO 3166-1 alpha-2 two-letter code or null>",
   "start_date": "<YYYY-MM-DD — only if explicitly stated in the email, otherwise null>",
   "end_date": "<YYYY-MM-DD — only if explicitly stated in the email, otherwise null>",
-  "booking_type": "<flight|hotel|activity|transport|other or null>"
+  "booking_type": "<flight|hotel|activity|transport|other or null>",
+  "categories": ["<category_name>", ...],
+  "keyword_hits": {{
+    "<category_name>": ["<keyword>", ...]
+  }}
 }}
 
-Focus on the city the traveler is going TO (not the origin). If multiple destinations, pick the primary one.
-Never infer or guess dates — use null if the date is not explicitly written in the email.
+For categories and keyword_hits, only use the following allowed values:
+{categories_spec}
+
+Rules:
+- Focus on the city the traveler is going TO (not the origin).
+- Never infer or guess dates — use null if not explicitly written.
+- Only include a category when there is clear evidence in the email.
+- Only include keywords from the allowed list above that are genuinely evidenced.
+- categories must be a flat list of matched category names; keyword_hits maps each matched category to its matched keywords.
 Respond with valid JSON only.\
 """
 
 
+def _build_booking_prompt(subject: str, body: str) -> str:
+    from detection.config import get_activity_signals
+    signals = get_activity_signals()
+    lines = [f'  {cat}: {", ".join(kws)}' for cat, kws in signals.items()]
+    categories_spec = "\n".join(lines)
+    return _BOOKING_PROMPT.format(
+        subject=subject,
+        body=body[:4000],
+        categories_spec=categories_spec,
+    )
+
+
 def extract_booking(subject: str, body: str) -> dict:
-    """Extract destination, country, dates and booking type from a single email body."""
+    """Extract destination, country, dates, booking type and activity categories from an email."""
     if not OPENROUTER_API_KEY:
         raise RuntimeError("OPENROUTER_API_KEY is not set — LLM extraction unavailable")
 
-    prompt = _BOOKING_PROMPT.format(subject=subject, body=body[:4000])
+    prompt = _build_booking_prompt(subject, body)
 
     log.info(f"LLM  extract_booking  model={OPENROUTER_MODEL}  subject={subject[:60]!r}")
 

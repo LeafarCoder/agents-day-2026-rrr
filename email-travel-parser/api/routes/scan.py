@@ -90,9 +90,9 @@ async def scan_stream(request: Request, from_date: str, to_date: str):
                     total=len(messages),
                 )
 
-                # Always fetch full body — needed for activity detection and LLM extraction.
+                # Fetch full body for LLM extraction.
                 full      = await asyncio.to_thread(fetcher.get_full, service, msg_ref["id"])
-                body_text = parser.decode_body(full.get("payload", {}))
+                body_text = parser.decode_body(full.get("payload", {}))  # passed to LLM
 
                 # Use cached LLM result if this email was already processed in a prior scan.
                 extraction: dict = {}
@@ -117,7 +117,6 @@ async def scan_stream(request: Request, from_date: str, to_date: str):
                 if not destination:
                     dest_missing += 1
 
-                text = subject + " " + body_text
                 bookings.append({
                     "id":             msg_ref["id"],
                     "date":           raw_date,
@@ -128,8 +127,8 @@ async def scan_stream(request: Request, from_date: str, to_date: str):
                     "country_code":   country_code,
                     "booking_type":   booking_type,
                     "llm_extraction": extraction or None,
-                    "activities":     parser.detect_activities(text),
-                    "keyword_hits":   parser.detect_activity_keywords(text),
+                    "activities":     extraction.get("categories") or [],
+                    "keyword_hits":   extraction.get("keyword_hits") or {},
                 })
 
             yield _event(
