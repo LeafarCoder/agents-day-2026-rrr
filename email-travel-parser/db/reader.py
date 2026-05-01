@@ -31,15 +31,18 @@ def _trip_label(start_dt: datetime, end_dt: datetime) -> str | None:
 
 def get_email_extraction(gmail_msg_id: str) -> dict | None:
     """Return cached LLM extraction for an email, or None if not yet extracted."""
-    db = get_client()
-    res = (
-        db.table("emails")
-        .select("llm_extraction")
-        .eq("gmail_msg_id", gmail_msg_id)
-        .not_.is_("llm_extraction", "null")
-        .execute()
-    )
-    return res.data[0]["llm_extraction"] if res.data else None
+    try:
+        db = get_client()
+        res = (
+            db.table("emails")
+            .select("llm_extraction")
+            .eq("gmail_msg_id", gmail_msg_id)
+            .not_.is_("llm_extraction", "null")
+            .execute()
+        )
+        return res.data[0]["llm_extraction"] if res.data else None
+    except Exception:
+        return None
 
 
 def get_profile(user_email: str) -> dict | None:
