@@ -36,6 +36,10 @@ function flagEmoji(code: string) {
   return [...code.toUpperCase()].map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('')
 }
 
+export function generateStaticParams() {
+  return []
+}
+
 export default function CountryPage() {
   const { code } = useParams<{ code: string }>()
   const [data, setData]       = useState<CountryData | null>(null)
