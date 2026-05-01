@@ -17,6 +17,7 @@ def build_query(since: date, until: date) -> str:
     subject_clauses = " OR ".join(f"subject:{kw}" for kw in SUBJECT_KEYWORDS)
     return (
         f"(({domain_clauses}) OR ({subject_clauses}))"
+        f" -in:spam -in:promotions"
         f" after:{since.strftime('%Y/%m/%d')}"
         f" before:{(until + timedelta(days=1)).strftime('%Y/%m/%d')}"
     )
