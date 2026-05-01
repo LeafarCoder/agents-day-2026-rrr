@@ -165,6 +165,70 @@ make start
 
 Open `http://localhost:8042`.
 
+## Railway Backend Deployment
+
+Deploy the backend from the `email-travel-parser` directory. The Docker image
+installs:
+
+- `msgvault`
+- Ollama
+- Python dependencies
+
+At container start, `scripts/railway_start.sh`:
+
+1. Creates `MSGVAULT_HOME/config.toml` if missing.
+2. Starts `ollama serve`.
+3. Pulls `nomic-embed-text` if it is not already in the mounted model cache.
+4. Initializes the msgvault database if needed.
+5. Starts FastAPI.
+
+Railway service settings:
+
+- Root directory: `email-travel-parser`
+- Builder: Dockerfile
+- Persistent volume mounted at `/root/.msgvault`
+- Recommended second persistent volume mounted at `/root/.ollama`
+
+Required backend environment:
+
+```env
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_KEY=<service_role secret key>
+SECRET_KEY=<random session secret>
+
+FRONTEND_URL=https://<cloudflare-pages-url>
+GOOGLE_REDIRECT_URI=https://<railway-backend-url>/oauth/callback
+OAUTHLIB_INSECURE_TRANSPORT=0
+SESSION_COOKIE_SAMESITE=none
+SESSION_COOKIE_SECURE=1
+
+GOOGLE_CREDENTIALS_JSON=<base64 credentials.json>
+
+OPENROUTER_API_KEY=sk-or-v1-...
+OPENROUTER_MODEL=minimax/minimax-m1
+MSGVAULT_HOME=/root/.msgvault
+OLLAMA_HOST=http://127.0.0.1:11434
+OLLAMA_MODELS=/root/.ollama/models
+MSGVAULT_ACCOUNT=email.travel.parser@gmail.com
+```
+
+After the first deploy, authorize and sync msgvault inside the Railway service
+once so `/api/profile/build` can use the server-side archive:
+
+```bash
+msgvault add-account email.travel.parser@gmail.com --headless
+python scripts/msgvault_domain_sync.py \
+  --account email.travel.parser@gmail.com \
+  --after 2025-01-01
+msgvault build-embeddings --full-rebuild --yes
+msgvault search "cooking classes wine tasting architecture walks boutique hotels" \
+  --account email.travel.parser@gmail.com --mode hybrid --json --limit 5 --explain
+```
+
+The regular Gmail scan UI does not require msgvault. The LLM-backed
+`/api/profile/build` endpoint does require the Railway msgvault archive and
+vector index above.
+
 ## Full End-to-End Test (msgvault + Supabase)
 
 1) Full local archive sync:

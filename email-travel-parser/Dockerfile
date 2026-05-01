@@ -3,7 +3,7 @@ FROM python:3.12-slim
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl ca-certificates && \
+    bash curl ca-certificates sqlite3 && \
     rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
@@ -11,16 +11,18 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Optional: place a Linux amd64 binary at bin/msgvault-linux before building.
-# The web app works without it — msgvault is only needed for the taste-profile pipeline script.
+# Prefer a checked-in Linux binary if present; otherwise install msgvault at build time.
 RUN if [ -f bin/msgvault-linux ]; then \
       install -m 0755 bin/msgvault-linux /usr/local/bin/msgvault; \
+    else \
+      curl -fsSL https://msgvault.io/install.sh | bash && \
+      install -m 0755 /root/.local/bin/msgvault /usr/local/bin/msgvault; \
     fi
+
+RUN curl -fsSL https://ollama.com/install.sh | sh
+
+RUN chmod +x /app/scripts/railway_start.sh
 
 EXPOSE 8042
 
-CMD ["uvicorn", "api.main:app", \
-     "--host", "0.0.0.0", \
-     "--port", "8042", \
-     "--proxy-headers", \
-     "--forwarded-allow-ips=*"]
+CMD ["/app/scripts/railway_start.sh"]
