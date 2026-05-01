@@ -128,12 +128,13 @@ Return a JSON object with exactly these fields:
   "destination_city": "<primary destination city name or null>",
   "destination_country": "<full country name in English or null>",
   "country_code": "<ISO 3166-1 alpha-2 two-letter code or null>",
-  "start_date": "<YYYY-MM-DD or null>",
-  "end_date": "<YYYY-MM-DD or null>",
+  "start_date": "<YYYY-MM-DD — only if explicitly stated in the email, otherwise null>",
+  "end_date": "<YYYY-MM-DD — only if explicitly stated in the email, otherwise null>",
   "booking_type": "<flight|hotel|activity|transport|other or null>"
 }}
 
 Focus on the city the traveler is going TO (not the origin). If multiple destinations, pick the primary one.
+Never infer or guess dates — use null if the date is not explicitly written in the email.
 Respond with valid JSON only.\
 """
 
