@@ -10,3 +10,6 @@ venv/
 .claude/
 token.json
 credentials.json
+
+supabase/.temp/
+email-travel-parser/supabase/.temp/
