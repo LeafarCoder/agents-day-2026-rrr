@@ -50,3 +50,46 @@ def get_profile(user_email: str) -> dict | None:
         "travels":     travels_res.data,
         "email_count": emails_res.count or 0,
     }
+
+
+def get_scan_results(user_email: str) -> dict | None:
+    profile = get_profile(user_email)
+    if not profile:
+        return None
+
+    db      = get_client()
+    user_id = profile["user"]["id"]
+
+    emails_res = (
+        db.table("emails")
+        .select("subject, sender_domain, email_date, travels(title)")
+        .eq("user_id", user_id)
+        .order("email_date", desc=True)
+        .execute()
+    )
+
+    from collections import Counter, defaultdict
+
+    bookings = [
+        {
+            "date":        r["email_date"],
+            "domain":      r["sender_domain"] or "None",
+            "destination": r["travels"]["title"] if r.get("travels") else None,
+            "subject":     r["subject"],
+        }
+        for r in emails_res.data
+    ]
+
+    trips_by_year: dict = defaultdict(int)
+    platforms: Counter  = Counter()
+    for b in bookings:
+        if b["date"]:
+            trips_by_year[b["date"][:4]] += 1
+        platforms[b["domain"]] += 1
+
+    return {
+        **profile,
+        "bookings":      bookings,
+        "trips_by_year": dict(sorted(trips_by_year.items())),
+        "platforms_used": dict(platforms.most_common()),
+    }

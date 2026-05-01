@@ -38,8 +38,9 @@
     .step-list li.active { color: #1a1a1a; font-weight: 500; }
     .step-list li.done   { color: #137333; }
     .step-list li.error  { color: #c5221f; }
-    .step-icon { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
-    .spinner { width: 16px; height: 16px; border: 2px solid #dadce0; border-top-color: #4285f4; border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; margin-top: 2px; }
+    .step-icon { width: 18px; height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+    .step-dot  { width: 8px; height: 8px; border-radius: 50%; background: #d0d0d0; display: inline-block; }
+    .spinner { width: 16px; height: 16px; border: 2px solid #dadce0; border-top-color: #4285f4; border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .progress-bar-wrap { margin-top: 14px; background: #e0e0e0; border-radius: 4px; height: 4px; overflow: hidden; }
     .progress-bar { height: 4px; background: #4285f4; border-radius: 4px; transition: width .3s ease; width: 0%; }
@@ -207,7 +208,8 @@
       const icon =
         state === 'done'   ? '✓' :
         state === 'error'  ? '✗' :
-        state === 'active' ? '<span class="spinner"></span>' : '○';
+        state === 'active' ? '<span class="spinner"></span>' :
+                             '<span class="step-dot"></span>';
       li.innerHTML = `<span class="step-icon">${icon}</span><span>${msg}</span>`;
     }
 
@@ -248,7 +250,7 @@
           setStep('done',      msg,                       'done');
           document.getElementById('progress-bar').style.width = '100%';
           es.close();
-          setTimeout(() => window.location.reload(), 800);
+          setTimeout(() => window.location.href = '/scan', 800);
         } else if (step === 'error') {
           setStep(step, msg, 'error');
           es.close();
