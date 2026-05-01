@@ -275,9 +275,9 @@ def _upsert_preferences_from_extraction(db, user_id: str, run_id: str, extracted
                         "user_preference_id": up_id,
                         "run_id":             run_id,
                         "confidence":         confidence,
-                        "rationale":          f"Extracted by MiniMax from {pref.get('evidence_count', 1)} emails",
+                        "rationale":          f"Extracted from {pref.get('evidence_count', 1)} emails",
                     },
-                    on_conflict="user_preference_id,evidence_id",
+                    on_conflict="user_preference_id,run_id",
                 ).execute()
 
 

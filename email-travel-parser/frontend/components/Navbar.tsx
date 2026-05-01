@@ -53,7 +53,7 @@ export default function Navbar() {
           }}
         >
           <span style={{ color: "var(--text-accent)", fontSize: "1.1rem" }}>✦</span>
-          TravelProfiler
+          Travel DNA
         </Link>
 
         {/* Nav links + theme toggle */}

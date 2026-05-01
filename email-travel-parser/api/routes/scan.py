@@ -70,6 +70,13 @@ async def scan_stream(request: Request, from_date: str, to_date: str):
             domain  = parser.extract_sender_domain(headers.get("From", ""))
             subject = headers.get("Subject", "")
 
+            raw_date = parser.parse_date(headers.get("Date", ""))
+            if raw_date:
+                email_date = date.fromisoformat(raw_date)
+                if not (since <= email_date <= until):
+                    skipped += 1
+                    continue
+
             if not domain and not parser.is_confirmation(subject):
                 skipped += 1
                 continue
@@ -98,7 +105,7 @@ async def scan_stream(request: Request, from_date: str, to_date: str):
             text = subject + " " + body_text
             bookings.append({
                 "id":           msg_ref["id"],
-                "date":         parser.parse_date(headers.get("Date", "")),
+                "date":         raw_date,
                 "domain":       domain,
                 "subject":      subject,
                 "destination":  destination,

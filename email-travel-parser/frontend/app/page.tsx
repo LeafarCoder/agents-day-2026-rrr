@@ -9,6 +9,14 @@ type KeywordPref = { keyword: string; count: number }
 type Preference = { total: number; keywords: KeywordPref[] }
 type CityVisit = { name: string; visits: string[] }
 type CountryVisit = { name: string; code: string; cities: CityVisit[] }
+type TripExperience = { category: string; examples: string[] }
+type TripData = { city: string; label: string | null; experiences: TripExperience[] }
+
+const CATEGORY_LABEL: Record<string, string> = {
+  food_dining: 'Food & Dining', culture_history: 'Culture', adventure_outdoor: 'Outdoor',
+  nightlife: 'Nightlife', wellness: 'Wellness', sightseeing: 'Sightseeing',
+  accommodation: 'Accommodation', transportation: 'Transportation', cuisine: 'Cuisine',
+}
 type Profile = {
   email_count?: number
   preferences?: Record<string, Preference>
@@ -37,6 +45,34 @@ export default function DashboardPage() {
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
   const [scanError, setScanError] = useState('')
+  const [selectedCity, setSelectedCity] = useState<{ countryCode: string; cityName: string } | null>(null)
+  const [expCache, setExpCache] = useState<Record<string, TripData[]>>({})
+  const [expLoading, setExpLoading] = useState(false)
+
+  async function selectCity(countryCode: string, cityName: string) {
+    const key = `${countryCode}:${cityName}`
+    if (selectedCity?.countryCode === countryCode && selectedCity?.cityName === cityName) {
+      setSelectedCity(null)
+      return
+    }
+    setSelectedCity({ countryCode, cityName })
+    if (expCache[key]) return
+    setExpLoading(true)
+    try {
+      const r = await fetch(`${API_URL}/api/experiences/${countryCode}`, { credentials: 'include' })
+      if (r.ok) {
+        const d = await r.json()
+        const entries: Record<string, TripData[]> = {}
+        for (const trip of (d.trips ?? []) as TripData[]) {
+          const k = `${countryCode}:${trip.city}`
+          entries[k] = [...(entries[k] ?? []), trip]
+        }
+        setExpCache(prev => ({ ...prev, ...entries }))
+      }
+    } finally {
+      setExpLoading(false)
+    }
+  }
 
   useEffect(() => {
     fetch(`${API_URL}/api/me`, { credentials: 'include' })
@@ -166,9 +202,6 @@ export default function DashboardPage() {
         ([, a], [, b]) => b.total - a.total
       )
     : []
-  const maxKeywordCount = prefs.length
-    ? Math.max(...prefs.flatMap(([, p]) => p.keywords.map(k => k.count)), 1)
-    : 1
   const countries = profile?.countries_visited ?? []
 
   return (
@@ -268,43 +301,42 @@ export default function DashboardPage() {
               <h2 style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '1.25rem' }}>
                 Activity Preferences
               </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                {prefs.map(([category, data], i) => (
-                  <div key={category} className={`fade-in d-${Math.min(i + 1, 6) * 100 as 100 | 200 | 300 | 400 | 500 | 600}`}>
-                    {/* Category header */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.6rem' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text)', textTransform: 'capitalize' }}>
-                        {category.replace(/_/g, ' ')}
-                      </span>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                        {data.total}×
-                      </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+                {prefs.map(([category, data], i) => {
+                  const topCount = data.keywords[0]?.count ?? 1
+                  return (
+                    <div key={category} className={`fade-in d-${Math.min(i + 1, 6) * 100 as 100 | 200 | 300 | 400 | 500 | 600}`}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.5rem' }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)', textTransform: 'capitalize' }}>
+                          {category.replace(/_/g, ' ')}
+                        </span>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', letterSpacing: '0.03em' }}>
+                          {data.total}×
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                        {data.keywords.map(kw => {
+                          const ratio = kw.count / topCount
+                          const opacity = ratio >= 0.5 ? 1 : ratio >= 0.2 ? 0.65 : 0.4
+                          return (
+                            <span key={kw.keyword} style={{
+                              fontSize: '0.72rem',
+                              color: 'var(--text)',
+                              background: 'rgba(0,212,170,0.08)',
+                              border: '1px solid rgba(0,212,170,0.18)',
+                              borderRadius: 'var(--radius-sm)',
+                              padding: '0.2rem 0.55rem',
+                              opacity,
+                              transition: 'opacity 200ms',
+                            }}>
+                              {kw.keyword}
+                            </span>
+                          )
+                        })}
+                      </div>
                     </div>
-                    {/* Keywords */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-                      {data.keywords.map(kw => (
-                        <div key={kw.keyword} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', width: 140, flexShrink: 0 }}>
-                            {kw.keyword}
-                          </span>
-                          <div style={{ flex: 1, height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
-                            <div style={{
-                              height: '100%',
-                              borderRadius: 2,
-                              background: 'linear-gradient(90deg, #00d4aa, #00a884)',
-                              width: `${(kw.count / maxKeywordCount) * 100}%`,
-                              transition: 'width 0.6s ease',
-                              boxShadow: '0 0 6px rgba(0,212,170,0.35)',
-                            }} />
-                          </div>
-                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', width: 28, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                            {kw.count}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
 
               <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
@@ -331,32 +363,117 @@ export default function DashboardPage() {
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.875rem' }}>
             {countries.map((country, i) => (
-              <Link
+              <div
                 key={country.name}
-                href={`/country/${country.code}`}
                 className={`fade-up d-${Math.min(i + 1, 6) * 100 as 100|200|300|400|500|600} glass-subtle`}
-                style={{ borderRadius: 'var(--radius-lg)', padding: '1.1rem 1.25rem', border: '1px solid var(--border)', transition: 'border-color 200ms', textDecoration: 'none', display: 'block', cursor: 'pointer' }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--border-accent)')}
-                onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+                style={{ borderRadius: 'var(--radius-lg)', padding: '1.1rem 1.25rem', border: '1px solid var(--border)' }}
               >
                 <h3 style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span aria-hidden="true">{flagEmoji(country.code)}</span>
                   {country.name}
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                   {country.cities.map(city => (
-                    <div key={city.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem' }}>
+                    <div
+                      key={city.name}
+                      className="city-row"
+                      onClick={() => selectCity(country.code, city.name)}
+                      style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem',
+                        padding: '0.4rem 0.6rem', margin: '0 -0.6rem',
+                      }}
+                    >
                       <span style={{ fontSize: '0.8rem', color: 'var(--text)' }}>{city.name}</span>
                       {city.visits.length > 0 && (
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', flexShrink: 0 }}>
-                          {city.visits.join(' · ')}
+                          {city.visits[0]}
                         </span>
                       )}
                     </div>
                   ))}
                 </div>
-              </Link>
+              </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Experiences popup */}
+      {selectedCity && (
+        <div
+          onClick={() => setSelectedCity(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 50,
+            background: 'rgba(0,0,0,0.45)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '1.5rem',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="glass fade-in"
+            style={{
+              borderRadius: 'var(--radius-xl)', padding: '1.75rem',
+              width: '100%', maxWidth: 420,
+              border: '1px solid var(--border)',
+              boxShadow: '0 24px 64px rgba(0,0,0,0.25)',
+            }}
+          >
+            {/* Header */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.3rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                {flagEmoji(selectedCity.countryCode)} {countries.find(c => c.code === selectedCity.countryCode)?.name}
+              </div>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
+                {selectedCity.cityName}
+              </h2>
+            </div>
+
+            {/* Experiences */}
+            {(() => {
+              const trips = expCache[`${selectedCity.countryCode}:${selectedCity.cityName}`]
+              if (expLoading && !trips) {
+                return <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>Loading…</p>
+              }
+              if (!trips || trips.flatMap(t => t.experiences).length === 0) {
+                return <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>No experiences detected for this trip.</p>
+              }
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {trips.map((trip, i) => (
+                    <div key={i}>
+                      {trip.label && (
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.5rem', letterSpacing: '0.03em' }}>
+                          {trip.label}
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                        {trip.experiences.map(exp => (
+                          <span key={exp.category} style={{
+                            fontSize: '0.75rem', color: 'var(--text-accent)',
+                            background: 'rgba(0,212,170,0.1)', border: '1px solid rgba(0,212,170,0.3)',
+                            borderRadius: 'var(--radius-md)', padding: '0.3rem 0.7rem',
+                          }}>
+                            {CATEGORY_LABEL[exp.category] ?? exp.category.replace(/_/g, ' ')}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
+
+            <button
+              onClick={() => setSelectedCity(null)}
+              style={{
+                marginTop: '1.5rem', fontSize: '0.75rem', color: 'var(--text-muted)',
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+              }}
+            >
+              Close
+            </button>
           </div>
         </div>
       )}

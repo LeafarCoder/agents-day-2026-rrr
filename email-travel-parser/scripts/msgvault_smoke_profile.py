@@ -67,7 +67,7 @@ def main() -> None:
             "status": "running",
             "search_mode": "hybrid",
             "search_queries": [query],
-            "embedding_dimensions": 1536,
+            "embedding_dimensions": 768,
         }
     ).execute().data[0]
 

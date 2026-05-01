@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 import os
 
 from detection.config import TRAVEL_DOMAINS, SUBJECT_KEYWORDS
@@ -18,7 +18,7 @@ def build_query(since: date, until: date) -> str:
     return (
         f"(({domain_clauses}) OR ({subject_clauses}))"
         f" after:{since.strftime('%Y/%m/%d')}"
-        f" before:{until.strftime('%Y/%m/%d')}"
+        f" before:{(until + timedelta(days=1)).strftime('%Y/%m/%d')}"
     )
 
 
