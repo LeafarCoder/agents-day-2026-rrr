@@ -8,6 +8,35 @@ from db.client import get as get_client
 log = get("db.writer")
 
 _UNKNOWN_COUNTRY = {"name": "Unknown", "code": "XX"}
+_CITY_COUNTRY_HINTS: dict[str, tuple[str, str]] = {
+    "lisbon": ("Portugal", "PT"),
+    "porto": ("Portugal", "PT"),
+    "faro": ("Portugal", "PT"),
+    "paris": ("France", "FR"),
+    "lyon": ("France", "FR"),
+    "nice": ("France", "FR"),
+    "barcelona": ("Spain", "ES"),
+    "madrid": ("Spain", "ES"),
+    "seville": ("Spain", "ES"),
+    "rome": ("Italy", "IT"),
+    "milan": ("Italy", "IT"),
+    "venice": ("Italy", "IT"),
+    "berlin": ("Germany", "DE"),
+    "munich": ("Germany", "DE"),
+    "amsterdam": ("Netherlands", "NL"),
+    "london": ("United Kingdom", "GB"),
+    "manchester": ("United Kingdom", "GB"),
+    "tokyo": ("Japan", "JP"),
+    "kyoto": ("Japan", "JP"),
+    "osaka": ("Japan", "JP"),
+    "bangkok": ("Thailand", "TH"),
+    "singapore": ("Singapore", "SG"),
+    "marrakech": ("Morocco", "MA"),
+    "sydney": ("Australia", "AU"),
+    "melbourne": ("Australia", "AU"),
+    "athens": ("Greece", "GR"),
+    "vienna": ("Austria", "AT"),
+}
 
 
 def persist(user_email: str, bookings: list[dict], profile: dict) -> None:
@@ -16,11 +45,11 @@ def persist(user_email: str, bookings: list[dict], profile: dict) -> None:
     user_id = _upsert_user(db, user_email, bookings)
     log.info(f"── DB  user upserted  id={user_id}")
 
-    country_id = _get_or_create_country(db)
-
     destination_travel: dict[str, str] = {}
     unique_destinations = {b["destination"] for b in bookings if b["destination"]}
     for dest in unique_destinations:
+        country = _infer_country_from_city(dest)
+        country_id = _get_or_create_country(db, country)
         city_id   = _get_or_create_city(db, dest, country_id)
         travel_id = _get_or_create_travel(db, user_id, city_id, dest, bookings)
         destination_travel[dest] = travel_id
@@ -57,12 +86,22 @@ def _upsert_user(db, email: str, bookings: list[dict]) -> str:
     return res.data[0]["id"]
 
 
-def _get_or_create_country(db) -> str:
-    res = db.table("countries").select("id").eq("code", _UNKNOWN_COUNTRY["code"]).execute()
+def _get_or_create_country(db, country: dict[str, str]) -> str:
+    res = db.table("countries").select("id").eq("code", country["code"]).execute()
     if res.data:
         return res.data[0]["id"]
-    ins = db.table("countries").insert(_UNKNOWN_COUNTRY).execute()
+    ins = db.table("countries").insert(country).execute()
     return ins.data[0]["id"]
+
+
+def _infer_country_from_city(city_name: str | None) -> dict[str, str]:
+    if not city_name:
+        return _UNKNOWN_COUNTRY
+    key = city_name.strip().lower()
+    if key in _CITY_COUNTRY_HINTS:
+        name, code = _CITY_COUNTRY_HINTS[key]
+        return {"name": name, "code": code}
+    return _UNKNOWN_COUNTRY
 
 
 def _get_or_create_city(db, name: str, country_id: str) -> str:
