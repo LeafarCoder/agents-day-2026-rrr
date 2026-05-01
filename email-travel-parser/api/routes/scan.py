@@ -4,7 +4,7 @@ import asyncio
 import json
 from datetime import date
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from detection import profile as profile_builder
@@ -36,7 +36,12 @@ def _event(step: str, msg: str, **extra) -> str:
 
 
 @router.get("/scan/stream")
-async def scan_stream(request: Request, from_date: str, to_date: str):
+async def scan_stream(
+    request: Request,
+    from_date: str,
+    to_date: str,
+    exclude: list[str] = Query(default=[]),
+):
     async def generate():
         from googleapiclient.discovery import build
 
@@ -55,7 +60,7 @@ async def scan_stream(request: Request, from_date: str, to_date: str):
 
             yield _event("fetching", f"Searching emails from {since} to {until}...")
 
-            messages = await asyncio.to_thread(fetcher.fetch_messages, service, since, until)
+            messages = await asyncio.to_thread(fetcher.fetch_messages, service, since, until, exclude)
 
             yield _event("fetching", f"Found {len(messages)} candidate emails", count=len(messages))
 

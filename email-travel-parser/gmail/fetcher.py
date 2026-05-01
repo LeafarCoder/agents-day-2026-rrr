@@ -9,22 +9,35 @@ from observability.logger import get
 log = get("gmail.fetcher")
 
 
-def build_query(since: date, until: date) -> str:
+_EXCLUDE_CLAUSES: dict[str, str] = {
+    "promotions": "-in:promotions",
+    "spam":       "-in:spam",
+    "social":     "-in:category_social",
+    "forums":     "-in:category_forums",
+}
+
+
+def build_query(since: date, until: date, exclude: list[str] | None = None) -> str:
     override = os.environ.get("GMAIL_QUERY_OVERRIDE")
     if override is not None:
         return override
-    domain_clauses = " OR ".join(f"from:{d}" for d in sorted(TRAVEL_DOMAINS))
-    subject_clauses = " OR ".join(f"subject:{kw}" for kw in SUBJECT_KEYWORDS)
+    domain_clauses   = " OR ".join(f"from:{d}" for d in sorted(TRAVEL_DOMAINS))
+    subject_clauses  = " OR ".join(f"subject:{kw}" for kw in SUBJECT_KEYWORDS)
+    exclude_clauses  = " ".join(
+        _EXCLUDE_CLAUSES[k] for k in (exclude or []) if k in _EXCLUDE_CLAUSES
+    )
+    query = f"(({domain_clauses}) OR ({subject_clauses}))"
+    if exclude_clauses:
+        query += f" {exclude_clauses}"
     return (
-        f"(({domain_clauses}) OR ({subject_clauses}))"
-        f" -in:spam -in:promotions"
-        f" after:{since.strftime('%Y/%m/%d')}"
-        f" before:{(until + timedelta(days=1)).strftime('%Y/%m/%d')}"
+        query
+        + f" after:{since.strftime('%Y/%m/%d')}"
+        + f" before:{(until + timedelta(days=1)).strftime('%Y/%m/%d')}"
     )
 
 
-def fetch_messages(service, since: date, until: date, max_results: int = 500) -> list[dict]:
-    query = build_query(since, until)
+def fetch_messages(service, since: date, until: date, exclude: list[str] | None = None, max_results: int = 500) -> list[dict]:
+    query = build_query(since, until, exclude)
     messages = []
     page_token = None
     page = 1

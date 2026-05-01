@@ -49,6 +49,13 @@ export default function DashboardPage() {
   const [expCache, setExpCache] = useState<Record<string, TripData[]>>({})
   const [expLoading, setExpLoading] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [excludeFilters, setExcludeFilters] = useState({
+    promotions: true,
+    spam:       false,
+    social:     false,
+    forums:     false,
+  })
 
   async function deleteAllData() {
     if (!confirm('Delete all your data? This cannot be undone.')) return
@@ -97,13 +104,25 @@ export default function DashboardPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  function setDatePreset(months: number) {
+    const today = new Date()
+    const from  = new Date(today)
+    from.setMonth(from.getMonth() - months)
+    setFromDate(from.toISOString().split('T')[0])
+    setToDate(today.toISOString().split('T')[0])
+  }
+
   function startScan() {
     setScanning(true)
     setSteps([])
     setCurrentStep('')
     setScanError('')
 
-    const url = `${API_URL}/scan/stream?from_date=${fromDate}&to_date=${toDate}`
+    const excludeParams = (Object.keys(excludeFilters) as (keyof typeof excludeFilters)[])
+      .filter(k => excludeFilters[k])
+      .map(k => `exclude=${k}`)
+      .join('&')
+    const url = `${API_URL}/scan/stream?from_date=${fromDate}&to_date=${toDate}${excludeParams ? '&' + excludeParams : ''}`
     const es = new EventSource(url, { withCredentials: true })
 
     es.onmessage = e => {
@@ -251,18 +270,65 @@ export default function DashboardPage() {
 
         {/* Date range + trigger */}
         {!scanning && (
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <div style={{ flex: 1, minWidth: 130 }}>
-              <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.35rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>From</label>
-              <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="input" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+
+            {/* Quick presets */}
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+              {([['1 month', 1], ['3 months', 3], ['1 year', 12], ['5 years', 60], ['10 years', 120]] as [string, number][]).map(([label, months]) => (
+                <button key={label} onClick={() => setDatePreset(months)} className="btn btn-ghost" style={{ fontSize: '0.72rem', padding: '0.25rem 0.6rem' }}>
+                  {label}
+                </button>
+              ))}
             </div>
-            <div style={{ flex: 1, minWidth: 130 }}>
-              <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.35rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>To</label>
-              <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="input" />
+
+            {/* Date pickers + scan */}
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <div style={{ flex: 1, minWidth: 130 }}>
+                <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.35rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>From</label>
+                <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="input" />
+              </div>
+              <div style={{ flex: 1, minWidth: 130 }}>
+                <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.35rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>To</label>
+                <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="input" />
+              </div>
+              <button onClick={startScan} className="btn btn-primary" style={{ flexShrink: 0 }}>
+                Scan
+              </button>
             </div>
-            <button onClick={startScan} className="btn btn-primary" style={{ flexShrink: 0 }}>
-              Scan
+
+            {/* Advanced options toggle */}
+            <button
+              onClick={() => setShowAdvanced(v => !v)}
+              style={{ alignSelf: 'flex-start', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem', padding: 0 }}
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ transform: showAdvanced ? 'rotate(90deg)' : 'none', transition: 'transform 200ms' }}>
+                <path d="M3 2l4 3-4 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Advanced filters
             </button>
+
+            {/* Advanced options panel */}
+            {showAdvanced && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '0 0 0.25rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Exclude Gmail categories</p>
+                {([
+                  ['promotions', 'Promotions'],
+                  ['spam',       'Spam'],
+                  ['social',     'Social'],
+                  ['forums',     'Forums'],
+                ] as [keyof typeof excludeFilters, string][]).map(([key, label]) => (
+                  <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text)' }}>
+                    <input
+                      type="checkbox"
+                      checked={excludeFilters[key]}
+                      onChange={e => setExcludeFilters(prev => ({ ...prev, [key]: e.target.checked }))}
+                      style={{ accentColor: 'var(--text-accent)', width: 14, height: 14 }}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
