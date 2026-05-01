@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import httpx
 
 from config import OPENROUTER_API_KEY, OPENROUTER_MODEL
@@ -44,6 +45,61 @@ Respond with valid JSON only — no markdown fences, no commentary.\
 """
 
 
+def _load_json_object(text: str) -> dict:
+    text = text.strip()
+    try:
+        result = json.loads(text)
+        if isinstance(result, dict):
+            return result
+    except json.JSONDecodeError:
+        pass
+
+    decoder = json.JSONDecoder()
+    parsed: list[dict] = []
+    for match in re.finditer(r"\{", text):
+        try:
+            result, _ = decoder.raw_decode(text[match.start():])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(result, dict):
+            parsed.append(result)
+    for result in parsed:
+        if "taste_summary" in result and "preferences" in result:
+            return result
+    if parsed:
+        return parsed[0]
+    raise ValueError("No JSON object found in LLM response")
+
+
+def _parse_json_from_message(message: dict) -> dict:
+    raw = message.get("content")
+    reasoning = message.get("reasoning")
+    candidates = []
+    if isinstance(raw, str) and raw.strip():
+        candidates.append(raw)
+    if isinstance(reasoning, str) and reasoning.strip():
+        candidates.append(reasoning)
+    if isinstance(reasoning, str) and isinstance(raw, str):
+        candidates.append(reasoning + raw)
+        candidates.append(raw + reasoning)
+
+    fallback: dict | None = None
+    for text in candidates:
+        try:
+            result = _load_json_object(text)
+        except ValueError:
+            continue
+        if "taste_summary" in result and "preferences" in result:
+            return result
+        if fallback is None:
+            fallback = result
+
+    if fallback is not None:
+        return fallback
+
+    raise ValueError("LLM response did not include JSON content")
+
+
 def extract_preferences(evidence_emails: list[dict]) -> dict:
     """Send evidence emails to MiniMax via OpenRouter and return structured preferences."""
     lines = []
@@ -78,7 +134,7 @@ def extract_preferences(evidence_emails: list[dict]) -> dict:
     )
     response.raise_for_status()
 
-    raw = response.json()["choices"][0]["message"]["content"]
-    result = json.loads(raw)
+    message = response.json()["choices"][0]["message"]
+    result = _parse_json_from_message(message)
     log.info(f"LLM  extraction done  categories={[p['category'] for p in result.get('preferences', [])]}")
     return result

@@ -4,12 +4,17 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
-from config import FRONTEND_URL, SECRET_KEY
+from config import FRONTEND_URL, SECRET_KEY, SESSION_COOKIE_SAMESITE, SESSION_COOKIE_SECURE
 from api.routes import auth, scan, preferences, profile, experiences
 
 app = FastAPI(title="Travel DNA")
 
-app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SECRET_KEY,
+    same_site=SESSION_COOKIE_SAMESITE,
+    https_only=SESSION_COOKIE_SECURE,
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[FRONTEND_URL],

@@ -7,14 +7,69 @@ import re
 LOOKBACK_DAYS = int(os.environ.get("LOOKBACK_DAYS", "730"))
 
 TRAVEL_DOMAINS = {
-    "airbnb.com", "booking.com", "expedia.com", "hotels.com", "vrbo.com",
-    "hostelworld.com", "agoda.com", "viator.com", "getyourguide.com",
-    "klook.com", "withlocals.com", "ryanair.com", "easyjet.com",
-    "skyscanner.com", "kayak.com", "kiwi.com", "norwegian.com",
-    "vueling.com", "transavia.com", "wizzair.com", "flixbus.com",
-    "eurostar.com", "renfe.com", "sncf.fr", "trenitalia.com", "ouigo.com",
-    "bahn.de", "tripadvisor.com", "lastminute.com", "opodo.com",
-    "edreams.com", "tui.com", "marriott.com", "hilton.com", "accorhotels.com",
+    # Global / cross-region
+    "airbnb.com",
+    "booking.com",
+    "eventbrite.com",
+    "feverup.com",
+    "getyourguide.com",
+    "klook.com",
+    "omio.com",
+    "ticketmaster.com",
+    "trainline.com",
+    "todaytix.com",
+    "12go.asia",
+    "viator.com",
+
+    # Europe / flights / rail
+    "airfrance.com",
+    "bahn.de",
+    "easyjet.com",
+    "edreams.com",
+    "eurostar.com",
+    "flixbus.com",
+    "flytap.com",
+    "lastminute.com",
+    "norwegian.com",
+    "opodo.com",
+    "ouigo.com",
+    "renfe.com",
+    "ryanair.com",
+    "sncf-connect.com",
+    "sncf.fr",
+    "transavia.com",
+    "trenitalia.com",
+    "vueling.com",
+    "wizzair.com",
+
+    # APAC / Australia
+    "airasia.com",
+    "jetstar.com",
+    "qantas.com",
+    "singaporeair.com",
+    "virginaustralia.com",
+
+    # Hotels / OTAs / attractions
+    "accorhotels.com",
+    "agoda.com",
+    "expedia.com",
+    "hilton.com",
+    "hostelworld.com",
+    "hotels.com",
+    "jewelchangiairport.com",
+    "kayak.com",
+    "kiwi.com",
+    "marriott.com",
+    "tripadvisor.com",
+    "vrbo.com",
+    "withlocals.com",
+
+    # Activity/ticket operators seen in demo account
+    "oceanario.pt",
+    "ticketline.pt",
+    "velanotejo.pt",
+    "surfslisbon.com",
+    "skyscanner.net",
 }
 
 _DEFAULT_ACTIVITY_SIGNALS: dict[str, list[str]] = {

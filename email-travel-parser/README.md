@@ -63,7 +63,99 @@ ollama serve
 ollama pull nomic-embed-text
 ```
 
-Configure `~/.msgvault/config.toml` with your local `data_dir`, `database_url`, `client_secrets`, and vector embedding endpoint.
+Configure msgvault at `~/.msgvault/config.toml`:
+
+```toml
+[data]
+data_dir = "/Users/<you>/.msgvault"
+database_url = "/Users/<you>/.msgvault/msgvault.db"
+
+[oauth]
+client_secrets = "/absolute/path/to/email-travel-parser/credentials.json"
+
+[sync]
+rate_limit_qps = 5
+
+[vector]
+enabled = true
+backend = "sqlite-vec"
+
+[vector.embeddings]
+endpoint = "http://localhost:11434/v1"
+model = "nomic-embed-text"
+dimension = 768
+batch_size = 8
+max_input_chars = 4000
+```
+
+Initialize msgvault and authorize Gmail:
+
+```bash
+msgvault init-db
+msgvault add-account you@example.com
+```
+
+For a fast local test, sync only recent mail:
+
+```bash
+msgvault sync-full you@example.com --query "newer_than:365d" --limit 100
+```
+
+Build the local vector index:
+
+```bash
+msgvault build-embeddings --full-rebuild --yes
+```
+
+Domain-filtered demo sync (provider domains only, excludes private mail by
+domain):
+
+```bash
+venv/bin/python scripts/msgvault_domain_sync.py \
+  --account email.travel.parser@gmail.com \
+  --after 2025-01-01
+```
+
+Show discovered domains without syncing:
+
+```bash
+venv/bin/python scripts/msgvault_domain_sync.py --report-only
+```
+
+Verify keyword and hybrid search:
+
+```bash
+msgvault search "booking" --json --limit 10
+msgvault search "cooking classes wine tasting architecture walks boutique hotels" \
+  --mode hybrid --json --limit 8 --explain
+```
+
+msgvault stores Gmail locally in `~/.msgvault/msgvault.db` and vectors locally in
+`~/.msgvault/vectors.db`.
+
+Start the msgvault MCP server (for any MCP-capable LLM client):
+
+```bash
+msgvault mcp
+```
+
+Write a smoke-test profile to Supabase from msgvault hybrid results:
+
+```bash
+export MSGVAULT_ACCOUNT="you@example.com"
+venv/bin/python scripts/msgvault_smoke_profile.py
+```
+
+The smoke script writes:
+
+- `msgvault_sources`
+- `msgvault_profile_runs`
+- `msgvault_message_evidence`
+- `user_taste_profiles`
+
+It intentionally uses the existing keyword detector, not Claude. Its purpose is
+to prove local msgvault search and Supabase persistence before the production
+Claude extraction bridge is added.
 
 ## Running
 

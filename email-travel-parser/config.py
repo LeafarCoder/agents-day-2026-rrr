@@ -14,6 +14,8 @@ GOOGLE_REDIRECT_URI  = os.environ.get("GOOGLE_REDIRECT_URI", "")
 OPENROUTER_API_KEY   = os.environ.get("OPENROUTER_API_KEY", "")
 OPENROUTER_MODEL     = os.environ.get("OPENROUTER_MODEL", "minimax/minimax-m1")
 OLLAMA_HOST          = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+SESSION_COOKIE_SAMESITE = os.environ.get("SESSION_COOKIE_SAMESITE", "lax")
+SESSION_COOKIE_SECURE   = os.environ.get("SESSION_COOKIE_SECURE", "0") == "1"
 
 # On PaaS platforms (Railway, Render) files can't be mounted — supply credentials.json
 # as base64: base64 -i credentials.json | tr -d '\n'

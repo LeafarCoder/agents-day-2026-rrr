@@ -16,6 +16,7 @@ ALTER TABLE user_taste_profiles
 
 ALTER TABLE user_taste_profiles
     DROP CONSTRAINT IF EXISTS user_taste_profiles_embedding_dimensions_check;
+UPDATE user_taste_profiles SET embedding_dimensions = 768;
 ALTER TABLE user_taste_profiles
     ADD CONSTRAINT user_taste_profiles_embedding_dimensions_check
     CHECK (embedding_dimensions = 768);

@@ -83,6 +83,14 @@ def _sender_domain(message: dict) -> str | None:
     return None
 
 
+def _evidence_query_column(db) -> str:
+    try:
+        db.table("msgvault_message_evidence").select("query_that_found_email").limit(1).execute()
+        return "query_that_found_email"
+    except Exception:
+        return "search_query"
+
+
 def run(account_email: str) -> dict:
     msgvault_home = os.environ.get("MSGVAULT_HOME", os.path.expanduser("~/.msgvault"))
     queries = [os.environ["MSGVAULT_QUERY"]] if "MSGVAULT_QUERY" in os.environ else _DEFAULT_QUERIES
@@ -120,6 +128,7 @@ def run(account_email: str) -> dict:
     log.info(f"Pipeline  run_id={run_id}")
 
     # ── collect evidence via msgvault ─────────────────────────────────────────
+    evidence_query_column = _evidence_query_column(db)
     seen_ids: set[str] = set()
     evidence_emails: list[dict] = []
     evidence_rows:   list[dict] = []
@@ -158,7 +167,7 @@ def run(account_email: str) -> dict:
                 "subject":                    subject,
                 "sent_at":                    message.get("sent_at"),
                 "snippet":                    snippet,
-                "query_that_found_email":     query,
+                evidence_query_column:         query,
                 "search_rank":                rank,
                 "relevance_score":            hit.get("vector_score"),
                 "extracted_preferences":      [],
