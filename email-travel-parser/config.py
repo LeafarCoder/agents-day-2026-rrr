@@ -24,26 +24,29 @@ SESSION_COOKIE_SECURE   = os.environ.get("SESSION_COOKIE_SECURE", "0") == "1"
 # On PaaS platforms (Railway, Render) files can't be mounted — supply credentials.json
 # as base64: base64 -i credentials.json | tr -d '\n'
 _GOOGLE_CREDENTIALS_JSON = os.environ.get("GOOGLE_CREDENTIALS_JSON", "")
+GOOGLE_CREDENTIALS_ERROR = ""
 if _GOOGLE_CREDENTIALS_JSON and not os.path.exists(CREDENTIALS_FILE):
     import base64 as _b64
     import binascii as _binascii
 
-    _payload = _GOOGLE_CREDENTIALS_JSON.strip()
-    if (_payload.startswith('"') and _payload.endswith('"')) or (
-        _payload.startswith("'") and _payload.endswith("'")
-    ):
-        _payload = _payload[1:-1]
-
-    _raw: bytes
     try:
-        _raw = _b64.b64decode(_payload, validate=True)
-    except _binascii.Error:
-        _raw = _payload.encode("utf-8")
+        _payload = _GOOGLE_CREDENTIALS_JSON.strip()
+        if (_payload.startswith('"') and _payload.endswith('"')) or (
+            _payload.startswith("'") and _payload.endswith("'")
+        ):
+            _payload = _payload[1:-1]
 
-    # Fail fast if credentials payload is malformed.
-    json.loads(_raw.decode("utf-8"))
-    with open(CREDENTIALS_FILE, "wb") as _f:
-        _f.write(_raw)
+        _raw: bytes
+        try:
+            _raw = _b64.b64decode(_payload, validate=True)
+        except _binascii.Error:
+            _raw = _payload.encode("utf-8")
+
+        json.loads(_raw.decode("utf-8"))
+        with open(CREDENTIALS_FILE, "wb") as _f:
+            _f.write(_raw)
+    except Exception as exc:
+        GOOGLE_CREDENTIALS_ERROR = str(exc)
 
 # Set to 0 in production (HTTPS)
 os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT", "1")

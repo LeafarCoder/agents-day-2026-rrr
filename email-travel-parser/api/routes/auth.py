@@ -7,7 +7,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
 from googleapiclient.discovery import build
 
-from config import CREDENTIALS_FILE, FRONTEND_URL, GOOGLE_REDIRECT_URI
+from config import CREDENTIALS_FILE, FRONTEND_URL, GOOGLE_CREDENTIALS_ERROR, GOOGLE_REDIRECT_URI
 from gmail.auth import credentials_from_session, make_flow, save_credentials_to_session
 from db import reader
 
@@ -46,6 +46,8 @@ def me(request: Request):
 
 @router.get("/auth")
 def auth(request: Request):
+    if GOOGLE_CREDENTIALS_ERROR:
+        return {"error": f"credentials_json_invalid: {GOOGLE_CREDENTIALS_ERROR}"}
     if not os.path.exists(CREDENTIALS_FILE):
         return {"error": "credentials.json not found"}
     try:
