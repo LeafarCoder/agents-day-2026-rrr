@@ -1,9 +1,9 @@
 """
 Full taste-profile pipeline
 ============================
-  msgvault hybrid search
+  msgvault search
     → MiniMax M1 (via OpenRouter) — structured preference extraction
-    → Ollama nomic-embed-text     — 768-dim embedding
+    → hosted/local embedding      — 768-dim embedding
     → Supabase                    — upsert profile + evidence rows
 
 Usage (from email-travel-parser/ root):
@@ -13,6 +13,7 @@ Optional env overrides:
     MSGVAULT_HOME    path to msgvault data dir  (default: ~/.msgvault)
     MSGVAULT_QUERY   override the search query
     MSGVAULT_LIMIT   how many emails to retrieve (default: 20)
+    MSGVAULT_SEARCH_MODE fts|vector|hybrid (default: hybrid)
     OPENROUTER_MODEL override the LLM model
 """
 from __future__ import annotations
@@ -28,7 +29,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from db.client import get as get_db
 from llm.extractor import extract_preferences
-from llm.embedder import embed_text
+from llm.embedder import embed_text, embedding_model_name
 from observability.logger import get
 
 log = get("pipeline.taste_profile")
@@ -40,28 +41,57 @@ _DEFAULT_QUERIES = [
     "boutique hotel airbnb villa accommodation",
     "nightlife bar cocktail rooftop",
 ]
+_DEFAULT_FTS_QUERIES = [
+    "booking",
+    "cooking",
+    "wine",
+    "architecture",
+    "museum",
+    "surf",
+    "sailing",
+    "hotel",
+    "train",
+    "flight",
+    "festival",
+]
 
 _MSGVAULT_LIMIT = int(os.environ.get("MSGVAULT_LIMIT", "20"))
+_MSGVAULT_SEARCH_MODE = os.environ.get("MSGVAULT_SEARCH_MODE", "hybrid")
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _run_json(*args: str) -> dict:
+def _loads_json_output(text: str) -> dict | list:
+    decoder = json.JSONDecoder()
+    for index, char in enumerate(text):
+        if char not in "[{":
+            continue
+        try:
+            value, _ = decoder.raw_decode(text[index:])
+        except json.JSONDecodeError:
+            continue
+        return value
+    return {}
+
+
+def _run_json(*args: str) -> dict | list:
     result = subprocess.run(args, check=True, capture_output=True, text=True)
-    return json.loads(result.stdout)
+    return _loads_json_output(result.stdout)
 
 
 def _search(query: str, msgvault_home: str) -> list[dict]:
     try:
         data = _run_json(
             "msgvault", "search", query,
-            "--mode", "hybrid",
+            "--mode", _MSGVAULT_SEARCH_MODE,
             "--json",
             "--limit", str(_MSGVAULT_LIMIT),
         )
-        return data.get("results", [])
+        if isinstance(data, list):
+            return data
+        return data.get("results", []) if isinstance(data, dict) else []
     except (subprocess.CalledProcessError, json.JSONDecodeError, FileNotFoundError) as e:
         log.warning(f"msgvault search failed: {e}")
         return []
@@ -93,7 +123,12 @@ def _evidence_query_column(db) -> str:
 
 def run(account_email: str) -> dict:
     msgvault_home = os.environ.get("MSGVAULT_HOME", os.path.expanduser("~/.msgvault"))
-    queries = [os.environ["MSGVAULT_QUERY"]] if "MSGVAULT_QUERY" in os.environ else _DEFAULT_QUERIES
+    if "MSGVAULT_QUERY" in os.environ:
+        queries = [os.environ["MSGVAULT_QUERY"]]
+    elif _MSGVAULT_SEARCH_MODE == "fts":
+        queries = _DEFAULT_FTS_QUERIES
+    else:
+        queries = _DEFAULT_QUERIES
 
     db = get_db()
 
@@ -119,7 +154,7 @@ def run(account_email: str) -> dict:
             "user_id":             user_id,
             "msgvault_source_id":  source["id"],
             "status":              "running",
-            "search_mode":         "hybrid",
+            "search_mode":         _MSGVAULT_SEARCH_MODE,
             "search_queries":      queries,
             "embedding_dimensions": 768,
         }
@@ -211,7 +246,7 @@ def run(account_email: str) -> dict:
             "profile_text":         taste_text,
             "profile_json":         extracted,
             "embedding":            embedding,
-            "embedding_model":      "nomic-embed-text",
+            "embedding_model":      embedding_model_name(),
             "embedding_dimensions": 768,
             "source":               "msgvault_minimax",
             "confidence":           0.80,
@@ -226,7 +261,7 @@ def run(account_email: str) -> dict:
         {
             "status":              "completed",
             "search_result_count": len(evidence_rows),
-            "embedding_model":     "nomic-embed-text",
+            "embedding_model":     embedding_model_name(),
             "embedding_dimensions": 768,
             "completed_at":        _now(),
         }
@@ -279,15 +314,19 @@ def _upsert_preferences_from_extraction(db, user_id: str, run_id: str, extracted
 
             if up_res.data:
                 up_id = up_res.data[0]["id"]
-                db.table("user_preference_evidence").upsert(
-                    {
-                        "user_preference_id": up_id,
-                        "run_id":             run_id,
-                        "confidence":         confidence,
-                        "rationale":          f"Extracted from {pref.get('evidence_count', 1)} emails",
-                    },
-                    on_conflict="user_preference_id,run_id",
-                ).execute()
+                evidence_payload = {
+                    "user_preference_id": up_id,
+                    "run_id":             run_id,
+                    "confidence":         confidence,
+                    "rationale":          f"Extracted from {pref.get('evidence_count', 1)} emails",
+                }
+                try:
+                    db.table("user_preference_evidence").upsert(
+                        evidence_payload,
+                        on_conflict="user_preference_id,run_id",
+                    ).execute()
+                except Exception:
+                    db.table("user_preference_evidence").insert(evidence_payload).execute()
 
 
 if __name__ == "__main__":

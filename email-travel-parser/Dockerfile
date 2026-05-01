@@ -19,8 +19,6 @@ RUN if [ -f bin/msgvault-linux ]; then \
       install -m 0755 /root/.local/bin/msgvault /usr/local/bin/msgvault; \
     fi
 
-RUN curl -fsSL https://ollama.com/install.sh | sh
-
 RUN chmod +x /app/scripts/railway_start.sh
 
 EXPOSE 8042

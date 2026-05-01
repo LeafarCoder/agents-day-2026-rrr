@@ -63,7 +63,7 @@ ollama serve
 ollama pull nomic-embed-text
 ```
 
-Configure msgvault at `~/.msgvault/config.toml`:
+Configure msgvault at `~/.msgvault/config.toml` for local hybrid search:
 
 ```toml
 [data]
@@ -171,23 +171,19 @@ Deploy the backend from the `email-travel-parser` directory. The Docker image
 installs:
 
 - `msgvault`
-- Ollama
 - Python dependencies
 
 At container start, `scripts/railway_start.sh`:
 
 1. Creates `MSGVAULT_HOME/config.toml` if missing.
-2. Starts `ollama serve`.
-3. Pulls `nomic-embed-text` if it is not already in the mounted model cache.
-4. Initializes the msgvault database if needed.
-5. Starts FastAPI.
+2. Initializes the msgvault database if needed.
+3. Starts FastAPI.
 
 Railway service settings:
 
 - Root directory: `email-travel-parser`
 - Builder: Dockerfile
 - Persistent volume mounted at `/root/.msgvault`
-- Recommended second persistent volume mounted at `/root/.ollama`
 
 Required backend environment:
 
@@ -206,28 +202,34 @@ GOOGLE_CREDENTIALS_JSON=<base64 credentials.json>
 
 OPENROUTER_API_KEY=sk-or-v1-...
 OPENROUTER_MODEL=minimax/minimax-m1
+EMBEDDING_PROVIDER=openrouter
+OPENROUTER_EMBEDDING_MODEL=openai/text-embedding-3-small
+EMBEDDING_DIMENSIONS=768
+
 MSGVAULT_HOME=/root/.msgvault
-OLLAMA_HOST=http://127.0.0.1:11434
-OLLAMA_MODELS=/root/.ollama/models
 MSGVAULT_ACCOUNT=email.travel.parser@gmail.com
+MSGVAULT_SEARCH_MODE=fts
 ```
 
 After the first deploy, authorize and sync msgvault inside the Railway service
-once so `/api/profile/build` can use the server-side archive:
+once so `/api/profile/build` can use the server-side archive. This lightweight
+Railway setup uses msgvault full-text search for evidence retrieval and
+OpenRouter for the final 768-dimensional profile embedding:
 
 ```bash
 msgvault add-account email.travel.parser@gmail.com --headless
 python scripts/msgvault_domain_sync.py \
   --account email.travel.parser@gmail.com \
   --after 2025-01-01
-msgvault build-embeddings --full-rebuild --yes
-msgvault search "cooking classes wine tasting architecture walks boutique hotels" \
-  --account email.travel.parser@gmail.com --mode hybrid --json --limit 5 --explain
+msgvault search "cooking class wine tasting architecture walk" \
+  --account email.travel.parser@gmail.com --mode fts --json --limit 5
 ```
 
 The regular Gmail scan UI does not require msgvault. The LLM-backed
-`/api/profile/build` endpoint does require the Railway msgvault archive and
-vector index above.
+`/api/profile/build` endpoint does require the Railway msgvault archive above.
+For true msgvault hybrid search in production, configure msgvault with an
+OpenAI-compatible embedding endpoint that can authenticate to your provider,
+then set `MSGVAULT_SEARCH_MODE=hybrid` and run `msgvault build-embeddings`.
 
 ## Full End-to-End Test (msgvault + Supabase)
 
