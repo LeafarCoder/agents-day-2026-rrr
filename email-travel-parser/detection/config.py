@@ -101,6 +101,11 @@ def add_keyword(category: str, keyword: str) -> None:
 # Confirmation subject regex — rebuilt when the module loads
 # ---------------------------------------------------------------------------
 
+KEYWORD_ALIASES: dict[str, str] = {
+    "rail":     "train",
+    "eurostar": "train",
+}
+
 SUBJECT_KEYWORDS = [
     "flight", "hotel", "booking", "reservation", "itinerary",
     "confirmation", "eticket", "check-in", "receipt", "trip", "holiday", "airbnb",

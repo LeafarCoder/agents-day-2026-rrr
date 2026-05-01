@@ -7,6 +7,7 @@ from dateutil import parser as dateutil_parser
 
 from detection.config import (
     CONFIRMATION_REGEX,
+    KEYWORD_ALIASES,
     TRAVEL_DOMAINS,
     get_activity_signals,
 )
@@ -103,11 +104,16 @@ def detect_activities(text: str) -> list[str]:
 def detect_activity_keywords(text: str) -> dict[str, list[str]]:
     lower   = text.lower()
     signals = get_activity_signals()
-    return {
-        cat: [kw for kw in kws if kw in lower]
-        for cat, kws in signals.items()
-        if any(kw in lower for kw in kws)
-    }
+    result: dict[str, list[str]] = {}
+    for cat, kws in signals.items():
+        seen: set[str] = set()
+        for kw in kws:
+            if kw in lower:
+                canonical = KEYWORD_ALIASES.get(kw, kw)
+                if canonical not in seen:
+                    seen.add(canonical)
+                    result.setdefault(cat, []).append(canonical)
+    return result
 
 
 def parse_date(date_str: str) -> str | None:
