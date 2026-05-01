@@ -17,7 +17,7 @@ RUN if [ -f bin/msgvault-linux ]; then \
     else \
       (curl -fsSL https://msgvault.io/install.sh || \
        curl -fsSL https://raw.githubusercontent.com/wesm/msgvault/main/install.sh) | bash && \
-      install -m 0755 /root/.local/bin/msgvault /usr/local/bin/msgvault && \
+      command -v msgvault && \
       msgvault --version; \
     fi
 
