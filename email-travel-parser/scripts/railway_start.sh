@@ -23,7 +23,7 @@ backend = "sqlite-vec"
 EOF
 fi
 
-msgvault init-db || true
+timeout 15 msgvault init-db || true
 
 exec uvicorn api.main:app \
   --host 0.0.0.0 \
