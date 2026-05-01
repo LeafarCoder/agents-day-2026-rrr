@@ -71,7 +71,7 @@ data_dir = "/Users/<you>/.msgvault"
 database_url = "/Users/<you>/.msgvault/msgvault.db"
 
 [oauth]
-client_secrets = "/absolute/path/to/email-travel-parser/credentials.json"
+client_secrets = "/absolute/path/to/repo/credentials.json"
 
 [sync]
 rate_limit_qps = 5
@@ -167,7 +167,7 @@ Open `http://localhost:8042`.
 
 ## Railway Backend Deployment
 
-Deploy the backend from the `email-travel-parser` directory. The Docker image
+Deploy the backend from the repo root. The Docker image
 installs:
 
 - `msgvault`
@@ -181,7 +181,7 @@ At container start, `scripts/railway_start.sh`:
 
 Railway service settings:
 
-- Root directory: `email-travel-parser`
+- Root directory: `.` (repo root)
 - Builder: Dockerfile
 - Persistent volume mounted at `/root/.msgvault`
 

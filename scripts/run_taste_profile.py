@@ -6,7 +6,7 @@ Full taste-profile pipeline
     → hosted/local embedding      — 768-dim embedding
     → Supabase                    — upsert profile + evidence rows
 
-Usage (from email-travel-parser/ root):
+Usage (from repo root):
     MSGVAULT_ACCOUNT=you@gmail.com python scripts/run_taste_profile.py
 
 Optional env overrides:

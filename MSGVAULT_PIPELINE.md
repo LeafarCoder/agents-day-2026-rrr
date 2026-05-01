@@ -27,19 +27,14 @@ embedding model or change the migration dimension before deploying.
 
 ## Migration Boundaries
 
-This repo has two Supabase migration directories:
+## Supabase Schema
 
-- `supabase/migrations/` is the planner schema used by the Next.js/backend app.
-- `email-travel-parser/supabase/migrations/` is the normalized email parser
-  schema used by the Gmail scanner and Supabase writer.
-
-Do not push both directories into the same Postgres `public` schema without a
-schema consolidation pass. Both contexts currently have a `user_preferences`
-table with different shapes.
+The `supabase/migrations/` directory contains the Email Parser schema used by
+the Gmail scanner and Supabase writer.
 
 ## Supabase Schema Test
 
-From `email-travel-parser`:
+From repo root:
 
 ```bash
 supabase init

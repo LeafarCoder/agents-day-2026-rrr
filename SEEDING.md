@@ -117,10 +117,10 @@ git status --short
 Stage only the intended files:
 
 ```bash
-git add email-travel-parser/.gitignore \
-  email-travel-parser/SEEDING.md \
-  email-travel-parser/seed_travel_emails.py \
-  email-travel-parser/gmail_web_seed.py
+git add .gitignore \
+  SEEDING.md \
+  seed_travel_emails.py \
+  gmail_web_seed.py
 ```
 
 Commit:

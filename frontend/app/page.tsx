@@ -52,9 +52,9 @@ export default function DashboardPage() {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [excludeFilters, setExcludeFilters] = useState({
     promotions: true,
-    spam:       false,
-    social:     false,
-    forums:     false,
+    spam:       true,
+    social:     true,
+    forums:     true,
   })
 
   async function deleteAllData() {
@@ -281,8 +281,8 @@ export default function DashboardPage() {
               ))}
             </div>
 
-            {/* Date pickers + scan */}
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            {/* Date pickers */}
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 130 }}>
                 <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.35rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>From</label>
                 <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="input" />
@@ -291,8 +291,12 @@ export default function DashboardPage() {
                 <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.35rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>To</label>
                 <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="input" />
               </div>
-              <button onClick={startScan} className="btn btn-primary" style={{ flexShrink: 0 }}>
-                Scan
+            </div>
+
+            {/* Scan button — right-aligned below dates */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={startScan} className="btn btn-primary">
+                Scan Emails
               </button>
             </div>
 
@@ -430,9 +434,14 @@ export default function DashboardPage() {
       {/* Countries visited */}
       {countries.length > 0 && (
         <div className="fade-up d-400" style={{ marginTop: '1.5rem' }}>
-          <h2 style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '1rem' }}>
-            Countries Visited
-          </h2>
+          <div style={{ marginBottom: '1rem' }}>
+            <h2 style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
+              Places Visited
+            </h2>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '0.25rem 0 0', opacity: 0.6 }}>
+              Click a city to view trip details
+            </p>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.875rem' }}>
             {countries.map((country, i) => (
               <div
