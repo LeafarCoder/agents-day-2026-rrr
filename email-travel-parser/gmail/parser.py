@@ -100,6 +100,16 @@ def detect_activities(text: str) -> list[str]:
     return [cat for cat, kws in signals.items() if any(kw in lower for kw in kws)]
 
 
+def detect_activity_keywords(text: str) -> dict[str, list[str]]:
+    lower   = text.lower()
+    signals = get_activity_signals()
+    return {
+        cat: [kw for kw in kws if kw in lower]
+        for cat, kws in signals.items()
+        if any(kw in lower for kw in kws)
+    }
+
+
 def parse_date(date_str: str) -> str | None:
     try:
         return dateutil_parser.parse(date_str).strftime("%Y-%m-%d")

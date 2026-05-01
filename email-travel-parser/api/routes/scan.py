@@ -95,13 +95,15 @@ async def scan_stream(request: Request, from_date: str, to_date: str):
             else:
                 dest_from_subject += 1
 
+            text = subject + " " + body_text
             bookings.append({
-                "id":          msg_ref["id"],
-                "date":        parser.parse_date(headers.get("Date", "")),
-                "domain":      domain,
-                "subject":     subject,
-                "destination": destination,
-                "activities":  parser.detect_activities(subject + " " + body_text),
+                "id":           msg_ref["id"],
+                "date":         parser.parse_date(headers.get("Date", "")),
+                "domain":       domain,
+                "subject":      subject,
+                "destination":  destination,
+                "activities":   parser.detect_activities(text),
+                "keyword_hits": parser.detect_activity_keywords(text),
             })
 
         yield _event(

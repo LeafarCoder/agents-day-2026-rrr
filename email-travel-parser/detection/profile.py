@@ -7,6 +7,7 @@ from datetime import datetime
 def build(bookings: list[dict]) -> dict:
     destinations: Counter = Counter()
     activity_counts: Counter = Counter()
+    keyword_counts: Counter = Counter()
     domains: Counter = Counter()
     trips_by_year: defaultdict = defaultdict(int)
 
@@ -15,6 +16,9 @@ def build(bookings: list[dict]) -> dict:
             destinations[b["destination"]] += 1
         for act in b["activities"]:
             activity_counts[act] += 1
+        for kws in b.get("keyword_hits", {}).values():
+            for kw in kws:
+                keyword_counts[kw] += 1
         domains[b["domain"]] += 1
         if b["date"]:
             trips_by_year[b["date"][:4]] += 1
@@ -30,6 +34,7 @@ def build(bookings: list[dict]) -> dict:
         "destinations_visited": dict(destinations.most_common(20)),
         "activity_preferences": dict(ranked),
         "preference_intensity": intensity,
+        "keyword_counts": dict(keyword_counts),
         "top_categories": [cat for cat, _ in ranked[:5]],
         "platforms_used": dict(domains.most_common()),
         "trips_by_year": dict(sorted(trips_by_year.items())),

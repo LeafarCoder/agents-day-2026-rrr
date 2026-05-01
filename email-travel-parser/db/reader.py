@@ -40,7 +40,7 @@ def get_profile(user_email: str) -> dict | None:
 
     prefs_res = (
         db.table("user_preferences")
-        .select("intensity, activity_keywords(keyword, activity_categories(name))")
+        .select("count, activity_keywords(keyword, activity_categories(name))")
         .eq("user_id", user_id)
         .execute()
     )
@@ -50,10 +50,18 @@ def get_profile(user_email: str) -> dict | None:
         kw = row.get("activity_keywords")
         if not kw or not kw.get("activity_categories"):
             continue
-        cat_name  = kw["activity_categories"]["name"]
-        intensity = row["intensity"]
-        preferences.setdefault(cat_name, {"intensity": intensity, "keywords": []})
-        preferences[cat_name]["keywords"].append(kw["keyword"])
+        kw_count = row.get("count") or 0
+        if kw_count == 0:
+            continue
+        cat_name = kw["activity_categories"]["name"]
+        keyword  = kw["keyword"]
+        if cat_name not in preferences:
+            preferences[cat_name] = {"total": 0, "keywords": []}
+        preferences[cat_name]["total"] += kw_count
+        preferences[cat_name]["keywords"].append({"keyword": keyword, "count": kw_count})
+
+    for cat_data in preferences.values():
+        cat_data["keywords"].sort(key=lambda x: -x["count"])
 
     travels_res = (
         db.table("travels")
@@ -114,6 +122,83 @@ def get_profile(user_email: str) -> dict | None:
         "countries_visited": countries_visited,
         "email_count":       emails_res.count or 0,
     }
+
+
+def get_country_experiences(user_email: str, country_code: str) -> dict | None:
+    from gmail.parser import detect_activities
+
+    db = get_client()
+
+    user_res = db.table("users").select("id").eq("email", user_email).execute()
+    if not user_res.data:
+        return None
+    user_id = user_res.data[0]["id"]
+
+    travels_res = (
+        db.table("travels")
+        .select("id, title, start_date, end_date, cities(name, countries(name, code))")
+        .eq("user_id", user_id)
+        .order("start_date", desc=True)
+        .execute()
+    )
+
+    country_name: str | None = None
+    trips = []
+
+    for travel in travels_res.data:
+        city_data    = travel.get("cities")
+        country_data = city_data.get("countries") if city_data else None
+        if not country_data or country_data["code"].upper() != country_code.upper():
+            continue
+        country_name = country_data["name"]
+
+        emails_res = (
+            db.table("emails")
+            .select("subject, sender_domain, email_date")
+            .eq("travel_id", travel["id"])
+            .order("email_date", desc=True)
+            .execute()
+        )
+
+        experiences: dict[str, list[str]] = {}
+        for email in emails_res.data:
+            for cat in detect_activities(email.get("subject", "")):
+                bucket = experiences.setdefault(cat, [])
+                if len(bucket) < 3:
+                    bucket.append(email["subject"])
+
+        label: str | None = None
+        if travel.get("start_date"):
+            try:
+                start_dt   = datetime.strptime(travel["start_date"], "%Y-%m-%d")
+                month_year = start_dt.strftime("%b %Y")
+                end_str    = travel.get("end_date")
+                if end_str:
+                    end_dt    = datetime.strptime(end_str, "%Y-%m-%d")
+                    trip_lbl  = _trip_label(start_dt, end_dt)
+                    label     = f"{trip_lbl} · {month_year}" if trip_lbl else month_year
+                else:
+                    label = month_year
+            except ValueError:
+                pass
+
+        trips.append({
+            "id":          travel["id"],
+            "city":        city_data["name"],
+            "start_date":  travel.get("start_date"),
+            "end_date":    travel.get("end_date"),
+            "label":       label,
+            "email_count": len(emails_res.data),
+            "experiences": [
+                {"category": cat, "examples": exs}
+                for cat, exs in experiences.items()
+            ],
+        })
+
+    if not country_name:
+        return None
+
+    return {"country": {"name": country_name, "code": country_code}, "trips": trips}
 
 
 def get_scan_results(user_email: str) -> dict | None:

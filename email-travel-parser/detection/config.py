@@ -40,7 +40,12 @@ _DEFAULT_ACTIVITY_SIGNALS: dict[str, list[str]] = {
         "accommodation airbnb", "airbnb", "vacation rental", "apartment rental",
         "accommodation hotel", "hotel", "hostel", "resort", "bed and breakfast",
     ],
-    "flight":  ["flight", "e-ticket", "boarding", "itinerary"],
+    "transportation": [
+        "flight", "e-ticket", "boarding", "itinerary",
+        "budget flight", "business class", "first class", "economy class",
+        "train", "rail", "eurostar", "bus", "coach",
+        "ferry", "cruise", "car rental", "taxi", "transfer", "shuttle", "tuk-tuk",
+    ],
     "cuisine": [
         "italian", "japanese", "mexican", "indian", "chinese", "thai",
         "french", "spanish", "portuguese", "greek", "moroccan",

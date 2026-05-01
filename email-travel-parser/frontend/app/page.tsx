@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { API_URL } from '@/lib/api'
 
 type ScanStep = { step: string; msg: string; current?: number; total?: number }
-type Preference = { count: number; intensity: string }
+type KeywordPref = { keyword: string; count: number }
+type Preference = { total: number; keywords: KeywordPref[] }
 type CityVisit = { name: string; visits: string[] }
 type CountryVisit = { name: string; code: string; cities: CityVisit[] }
 type Profile = {
@@ -160,12 +161,14 @@ export default function DashboardPage() {
 
   /* ── Connected ─────────────────────────────────────────────────── */
   const profile = me.profile
-  const INTENSITY_ORDER: Record<string, number> = { strong: 0, moderate: 1, weak: 2 }
   const prefs = profile?.preferences
     ? Object.entries(profile.preferences as Record<string, Preference>).sort(
-        ([, a], [, b]) => (INTENSITY_ORDER[a.intensity] ?? 3) - (INTENSITY_ORDER[b.intensity] ?? 3)
+        ([, a], [, b]) => b.total - a.total
       )
     : []
+  const maxKeywordCount = prefs.length
+    ? Math.max(...prefs.flatMap(([, p]) => p.keywords.map(k => k.count)), 1)
+    : 1
   const countries = profile?.countries_visited ?? []
 
   return (
@@ -259,31 +262,47 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          {/* Preference bars */}
+          {/* Preference drilldown */}
           {prefs.length > 0 && (
             <div className="fade-up d-300 glass" style={{ borderRadius: 'var(--radius-xl)', padding: '1.5rem' }}>
               <h2 style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '1.25rem' }}>
                 Activity Preferences
               </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-                {prefs.map(([activity, data], i) => (
-                  <div key={activity} className={`fade-in d-${Math.min(i + 1, 6) * 100 as 100 | 200 | 300 | 400 | 500 | 600}`} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <span style={{ fontSize: '0.82rem', color: 'var(--text)', width: 150, flexShrink: 0, textTransform: 'capitalize' }}>
-                      {activity.replace(/_/g, ' ')}
-                    </span>
-                    <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
-                      <div style={{
-                        height: '100%',
-                        borderRadius: 2,
-                        background: 'linear-gradient(90deg, #00d4aa, #00a884)',
-                        width: data.intensity === 'strong' ? '100%' : data.intensity === 'moderate' ? '62%' : '32%',
-                        transition: 'width 0.6s ease',
-                        boxShadow: '0 0 8px rgba(0,212,170,0.4)',
-                      }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {prefs.map(([category, data], i) => (
+                  <div key={category} className={`fade-in d-${Math.min(i + 1, 6) * 100 as 100 | 200 | 300 | 400 | 500 | 600}`}>
+                    {/* Category header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.6rem' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text)', textTransform: 'capitalize' }}>
+                        {category.replace(/_/g, ' ')}
+                      </span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                        {data.total}×
+                      </span>
                     </div>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', width: 60, textAlign: 'right', letterSpacing: '0.03em' }}>
-                      {data.intensity}
-                    </span>
+                    {/* Keywords */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                      {data.keywords.map(kw => (
+                        <div key={kw.keyword} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', width: 140, flexShrink: 0 }}>
+                            {kw.keyword}
+                          </span>
+                          <div style={{ flex: 1, height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+                            <div style={{
+                              height: '100%',
+                              borderRadius: 2,
+                              background: 'linear-gradient(90deg, #00d4aa, #00a884)',
+                              width: `${(kw.count / maxKeywordCount) * 100}%`,
+                              transition: 'width 0.6s ease',
+                              boxShadow: '0 0 6px rgba(0,212,170,0.35)',
+                            }} />
+                          </div>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', width: 28, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                            {kw.count}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -312,10 +331,11 @@ export default function DashboardPage() {
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.875rem' }}>
             {countries.map((country, i) => (
-              <div
+              <Link
                 key={country.name}
+                href={`/country/${country.code}`}
                 className={`fade-up d-${Math.min(i + 1, 6) * 100 as 100|200|300|400|500|600} glass-subtle`}
-                style={{ borderRadius: 'var(--radius-lg)', padding: '1.1rem 1.25rem', border: '1px solid var(--border)', transition: 'border-color 200ms' }}
+                style={{ borderRadius: 'var(--radius-lg)', padding: '1.1rem 1.25rem', border: '1px solid var(--border)', transition: 'border-color 200ms', textDecoration: 'none', display: 'block', cursor: 'pointer' }}
                 onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--border-accent)')}
                 onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
               >
@@ -335,7 +355,7 @@ export default function DashboardPage() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
