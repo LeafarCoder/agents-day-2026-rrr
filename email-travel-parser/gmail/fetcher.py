@@ -1,27 +1,30 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import date
 
-from detection.config import LOOKBACK_DAYS, TRAVEL_DOMAINS, SUBJECT_KEYWORDS
+from detection.config import TRAVEL_DOMAINS, SUBJECT_KEYWORDS
 from observability.logger import get
 
 log = get("gmail.fetcher")
 
 
-def build_query() -> str:
+def build_query(since: date, until: date) -> str:
     domain_clauses  = " OR ".join(f"from:{d}" for d in sorted(TRAVEL_DOMAINS))
     subject_clauses = " OR ".join(f"subject:{kw}" for kw in SUBJECT_KEYWORDS)
-    since = (datetime.utcnow() - timedelta(days=LOOKBACK_DAYS)).strftime("%Y/%m/%d")
-    return f"(({domain_clauses}) OR ({subject_clauses})) -label:CATEGORY_PROMOTIONS after:{since}"
+    return (
+        f"(({domain_clauses}) OR ({subject_clauses}))"
+        f" after:{since.strftime('%Y/%m/%d')}"
+        f" before:{until.strftime('%Y/%m/%d')}"
+    )
 
 
-def fetch_messages(service, max_results: int = 500) -> list[dict]:
-    query      = build_query()
+def fetch_messages(service, since: date, until: date, max_results: int = 500) -> list[dict]:
+    query      = build_query(since, until)
     messages   = []
     page_token = None
     page       = 1
 
-    log.info(f"Gmail query  window={LOOKBACK_DAYS}d  domains={len(TRAVEL_DOMAINS)}  keywords={len(SUBJECT_KEYWORDS)}")
+    log.info(f"Gmail query  since={since}  until={until}  domains={len(TRAVEL_DOMAINS)}  keywords={len(SUBJECT_KEYWORDS)}")
 
     while len(messages) < max_results:
         batch  = min(100, max_results - len(messages))

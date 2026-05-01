@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
@@ -15,8 +16,15 @@ templates = Jinja2Templates(directory="templates")
 
 @router.get("/")
 def index(request: Request):
-    connected = credentials_from_session(request.session) is not None
-    return templates.TemplateResponse(request, "index.html", {"connected": connected})
+    connected   = credentials_from_session(request.session) is not None
+    today       = date.today()
+    default_to  = today.isoformat()
+    default_from = (today - timedelta(days=365)).isoformat()
+    return templates.TemplateResponse(
+        request,
+        "index.html",
+        {"connected": connected, "default_from": default_from, "default_to": default_to},
+    )
 
 
 @router.get("/auth")
@@ -40,7 +48,7 @@ def oauth_callback(request: Request):
     flow.code_verifier  = request.session.get("code_verifier")
     flow.fetch_token(authorization_response=str(request.url))
     save_credentials_to_session(flow.credentials, request.session)
-    return RedirectResponse("/scan")
+    return RedirectResponse("/")
 
 
 @router.get("/disconnect")

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections import Counter
+from datetime import date, timedelta
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from googleapiclient.discovery import build
@@ -18,8 +18,8 @@ router    = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
 
-def _scrape(service) -> tuple[list[dict], dict]:
-    messages = fetcher.fetch_messages(service)
+def _scrape(service, since: date, until: date) -> tuple[list[dict], dict]:
+    messages = fetcher.fetch_messages(service, since, until)
 
     bookings               = []
     skipped_both_gates     = 0
@@ -106,16 +106,23 @@ def _scrape(service) -> tuple[list[dict], dict]:
     return bookings, profile
 
 
-@router.get("/scan")
-def scan(request: Request):
+@router.post("/scan")
+def scan(
+    request: Request,
+    from_date: str = Form(...),
+    to_date:   str = Form(...),
+):
     creds = credentials_from_session(request.session)
     if not creds:
-        return RedirectResponse("/auth")
+        return RedirectResponse("/auth", status_code=303)
+
+    since = date.fromisoformat(from_date)
+    until = date.fromisoformat(to_date)
 
     log.info("═" * 60)
-    log.info("Scan started")
+    log.info(f"Scan started  since={since}  until={until}")
     service           = build("gmail", "v1", credentials=creds)
-    bookings, profile = _scrape(service)
+    bookings, profile = _scrape(service, since, until)
 
     gmail_profile = service.users().getProfile(userId="me").execute()
     user_email    = gmail_profile["emailAddress"]

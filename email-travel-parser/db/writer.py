@@ -158,19 +158,19 @@ def _upsert_user_preferences(db, user_id: str, profile: dict) -> int:
             continue
         category_id = cat_res.data[0]["id"]
 
-        pref_res = (
-            db.table("preferences").select("id").eq("category_id", category_id).execute()
+        kw_res = (
+            db.table("activity_keywords").select("id").eq("category_id", category_id).execute()
         )
-        for pref in pref_res.data:
+        for kw in kw_res.data:
             db.table("user_preferences").upsert(
                 {
-                    "user_id":       user_id,
-                    "preference_id": pref["id"],
-                    "intensity":     intensity,
-                    "source":        "inferred",
-                    "updated_at":    _now(),
+                    "user_id":              user_id,
+                    "activity_keyword_id":  kw["id"],
+                    "intensity":            intensity,
+                    "source":               "inferred",
+                    "updated_at":           _now(),
                 },
-                on_conflict="user_id,preference_id",
+                on_conflict="user_id,activity_keyword_id",
             ).execute()
             count += 1
 

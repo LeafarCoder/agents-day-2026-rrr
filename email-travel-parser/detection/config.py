@@ -4,7 +4,7 @@ import json
 import os
 import re
 
-LOOKBACK_DAYS = 180
+LOOKBACK_DAYS = 730
 
 TRAVEL_DOMAINS = {
     "airbnb.com", "booking.com", "expedia.com", "hotels.com", "vrbo.com",
