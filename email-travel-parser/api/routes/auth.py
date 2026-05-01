@@ -66,7 +66,10 @@ def oauth_callback(request: Request):
     flow = make_flow(redirect_uri=_redirect_uri(request))
     flow.state = request.session.get("oauth_state")
     flow.code_verifier = request.session.get("code_verifier")
-    flow.fetch_token(authorization_response=str(request.url))
+    auth_response = str(request.url)
+    if auth_response.startswith("http://"):
+        auth_response = "https://" + auth_response[7:]
+    flow.fetch_token(authorization_response=auth_response)
     save_credentials_to_session(flow.credentials, request.session)
     return RedirectResponse(FRONTEND_URL)
 
