@@ -131,6 +131,9 @@ Respond with valid JSON only.\
 
 def extract_booking(subject: str, body: str) -> dict:
     """Extract destination, country, dates and booking type from a single email body."""
+    if not OPENROUTER_API_KEY:
+        raise RuntimeError("OPENROUTER_API_KEY is not set — LLM extraction unavailable")
+
     prompt = _BOOKING_PROMPT.format(subject=subject, body=body[:4000])
 
     log.info(f"LLM  extract_booking  subject={subject[:60]!r}")
