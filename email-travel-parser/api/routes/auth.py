@@ -48,7 +48,10 @@ def me(request: Request):
 def auth(request: Request):
     if not os.path.exists(CREDENTIALS_FILE):
         return {"error": "credentials.json not found"}
-    flow = make_flow(redirect_uri=_redirect_uri(request))
+    try:
+        flow = make_flow(redirect_uri=_redirect_uri(request))
+    except Exception as exc:
+        return {"error": f"oauth_flow_init_failed: {exc}"}
     auth_url, state = flow.authorization_url(
         access_type="offline",
         prompt="consent",
