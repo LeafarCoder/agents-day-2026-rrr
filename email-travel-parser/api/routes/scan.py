@@ -107,7 +107,7 @@ async def scan_stream(request: Request, from_date: str, to_date: str):
                         )
                         llm_extracted += 1
                 except Exception as exc:
-                    log.warning(f"LLM extraction failed  msg={msg_ref['id']}  err={exc}")
+                    log.exception(f"LLM extraction failed  msg={msg_ref['id']}  err={exc}")
 
                 destination  = extraction.get("destination_city") or None
                 country      = extraction.get("destination_country") or None

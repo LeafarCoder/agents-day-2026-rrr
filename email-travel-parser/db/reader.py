@@ -41,7 +41,9 @@ def get_email_extraction(gmail_msg_id: str) -> dict | None:
             .execute()
         )
         return res.data[0]["llm_extraction"] if res.data else None
-    except Exception:
+    except Exception as exc:
+        from observability.logger import get as _get
+        _get("db.reader").exception(f"get_email_extraction failed  gmail_msg_id={gmail_msg_id}  err={exc}")
         return None
 
 
