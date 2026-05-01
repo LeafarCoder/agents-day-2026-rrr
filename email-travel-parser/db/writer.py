@@ -148,6 +148,7 @@ def _upsert_user_preferences(db, user_id: str, profile: dict) -> int:
     if not intensity_map:
         return 0
 
+    mode = _user_preferences_mode(db)
     count = 0
     for category, intensity in intensity_map.items():
         cat_res = (
@@ -158,20 +159,53 @@ def _upsert_user_preferences(db, user_id: str, profile: dict) -> int:
             continue
         category_id = cat_res.data[0]["id"]
 
-        kw_res = (
-            db.table("activity_keywords").select("id").eq("category_id", category_id).execute()
-        )
-        for kw in kw_res.data:
-            db.table("user_preferences").upsert(
-                {
-                    "user_id":              user_id,
-                    "activity_keyword_id":  kw["id"],
-                    "intensity":            intensity,
-                    "source":               "inferred",
-                    "updated_at":           _now(),
-                },
-                on_conflict="user_id,activity_keyword_id",
-            ).execute()
-            count += 1
+        if mode == "preference_id":
+            pref_res = (
+                db.table("preferences").select("id").eq("category_id", category_id).execute()
+            )
+            for pref in pref_res.data:
+                db.table("user_preferences").upsert(
+                    {
+                        "user_id":       user_id,
+                        "preference_id": pref["id"],
+                        "intensity":     intensity,
+                        "source":        "inferred",
+                        "updated_at":    _now(),
+                    },
+                    on_conflict="user_id,preference_id",
+                ).execute()
+                count += 1
+        else:
+            keyword_res = (
+                db.table("activity_keywords").select("id").eq("category_id", category_id).execute()
+            )
+            for keyword in keyword_res.data:
+                db.table("user_preferences").upsert(
+                    {
+                        "user_id":             user_id,
+                        "activity_keyword_id": keyword["id"],
+                        "intensity":           intensity,
+                        "source":              "inferred",
+                        "updated_at":          _now(),
+                    },
+                    on_conflict="user_id,activity_keyword_id",
+                ).execute()
+                count += 1
 
     return count
+
+
+def _user_preferences_mode(db) -> str:
+    sample = db.table("user_preferences").select("*").limit(1).execute()
+    if sample.data:
+        row = sample.data[0]
+        if "preference_id" in row:
+            return "preference_id"
+        if "activity_keyword_id" in row:
+            return "activity_keyword_id"
+
+    try:
+        db.table("user_preferences").select("preference_id").limit(1).execute()
+        return "preference_id"
+    except Exception:
+        return "activity_keyword_id"
