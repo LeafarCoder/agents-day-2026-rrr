@@ -15,8 +15,10 @@ COPY . .
 RUN if [ -f bin/msgvault-linux ]; then \
       install -m 0755 bin/msgvault-linux /usr/local/bin/msgvault; \
     else \
-      curl -fsSL https://msgvault.io/install.sh | bash && \
-      install -m 0755 /root/.local/bin/msgvault /usr/local/bin/msgvault; \
+      (curl -fsSL https://msgvault.io/install.sh || \
+       curl -fsSL https://raw.githubusercontent.com/wesm/msgvault/main/install.sh) | bash && \
+      install -m 0755 /root/.local/bin/msgvault /usr/local/bin/msgvault && \
+      msgvault --version; \
     fi
 
 RUN chmod +x /app/scripts/railway_start.sh
