@@ -16,7 +16,7 @@ templates = Jinja2Templates(directory="templates")
 @router.get("/")
 def index(request: Request):
     connected = credentials_from_session(request.session) is not None
-    return templates.TemplateResponse("index.html", {"request": request, "connected": connected})
+    return templates.TemplateResponse(request, "index.html", {"connected": connected})
 
 
 @router.get("/auth")

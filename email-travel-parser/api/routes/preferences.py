@@ -13,8 +13,9 @@ templates = Jinja2Templates(directory="templates")
 @router.get("")
 def preferences_page(request: Request):
     return templates.TemplateResponse(
+        request,
         "preferences.html",
-        {"request": request, "signals": get_activity_signals()},
+        {"signals": get_activity_signals()},
     )
 
 

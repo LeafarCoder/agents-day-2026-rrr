@@ -11,6 +11,7 @@ from detection import profile as profile_builder
 from gmail.auth import credentials_from_session
 from gmail import fetcher, parser
 from observability.logger import get
+import db.writer as writer
 
 log       = get("scan")
 router    = APIRouter()
@@ -115,10 +116,17 @@ def scan(request: Request):
     log.info("Scan started")
     service           = build("gmail", "v1", credentials=creds)
     bookings, profile = _scrape(service)
+
+    gmail_profile = service.users().getProfile(userId="me").execute()
+    user_email    = gmail_profile["emailAddress"]
+    log.info(f"── Persisting to Supabase  user={user_email}")
+    writer.persist(user_email, bookings, profile)
+
     log.info("Scan complete")
     log.info("═" * 60)
 
     return templates.TemplateResponse(
+        request,
         "results.html",
-        {"request": request, "profile": profile, "bookings": bookings},
+        {"profile": profile, "bookings": bookings},
     )
