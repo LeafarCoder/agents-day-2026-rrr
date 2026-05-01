@@ -18,7 +18,7 @@ RUN if [ -f bin/msgvault-linux ]; then \
       (curl -fsSL https://msgvault.io/install.sh || \
        curl -fsSL https://raw.githubusercontent.com/wesm/msgvault/main/install.sh) | bash && \
       command -v msgvault && \
-      msgvault --version; \
+      msgvault version; \
     fi
 
 RUN chmod +x /app/scripts/railway_start.sh
