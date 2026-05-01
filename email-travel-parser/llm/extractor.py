@@ -4,7 +4,7 @@ import json
 import re
 import httpx
 
-from config import OPENROUTER_API_KEY, OPENROUTER_MODEL
+from config import OPENROUTER_API_KEY, OPENROUTER_MODEL, OPENROUTER_EXTRACTION_MODEL
 from observability.logger import get
 
 log = get("llm.extractor")
@@ -136,7 +136,7 @@ def extract_booking(subject: str, body: str) -> dict:
 
     prompt = _BOOKING_PROMPT.format(subject=subject, body=body[:4000])
 
-    log.info(f"LLM  extract_booking  subject={subject[:60]!r}")
+    log.info(f"LLM  extract_booking  model={OPENROUTER_EXTRACTION_MODEL}  subject={subject[:60]!r}")
 
     response = httpx.post(
         _OPENROUTER_URL,
@@ -147,7 +147,7 @@ def extract_booking(subject: str, body: str) -> dict:
             "X-Title": "Email Travel Parser",
         },
         json={
-            "model": OPENROUTER_MODEL,
+            "model": OPENROUTER_EXTRACTION_MODEL,
             "messages": [
                 {"role": "system", "content": _BOOKING_SYSTEM},
                 {"role": "user",   "content": prompt},
@@ -160,12 +160,15 @@ def extract_booking(subject: str, body: str) -> dict:
     response.raise_for_status()
 
     message = response.json()["choices"][0]["message"]
-    # Some models (e.g. MiniMax M1) return content=null and put output in reasoning.
+    # Some models return content=null and put output in reasoning.
     raw = message.get("content") or message.get("reasoning") or ""
+    log.debug(f"LLM extract_booking raw (first 500): {raw[:500]!r}")
     try:
-        return _load_json_object(raw)
+        result = _load_json_object(raw)
+        log.info(f"LLM extract_booking ok  city={result.get('destination_city')!r}  country={result.get('destination_country')!r}")
+        return result
     except ValueError:
-        log.warning(f"LLM extract_booking: no JSON in response  subject={subject[:60]!r}")
+        log.warning(f"LLM extract_booking: no JSON in response  subject={subject[:60]!r}  raw={raw[:300]!r}")
         return {}
 
 
