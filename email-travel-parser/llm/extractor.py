@@ -159,7 +159,9 @@ def extract_booking(subject: str, body: str) -> dict:
     )
     response.raise_for_status()
 
-    raw = response.json()["choices"][0]["message"].get("content", "")
+    message = response.json()["choices"][0]["message"]
+    # Some models (e.g. MiniMax M1) return content=null and put output in reasoning.
+    raw = message.get("content") or message.get("reasoning") or ""
     try:
         return _load_json_object(raw)
     except ValueError:
