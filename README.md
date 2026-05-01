@@ -1,143 +1,285 @@
-# B Planner
+# Email Travel Parser
 
-**Your Plan B, in 10 seconds.**
+Scans Gmail booking/confirmation emails from known travel brands and builds a structured travel preference profile in Supabase.
 
-GPS-triggered, preference-driven micro-itinerary builder for spontaneous travelers. Tap once, watch a 5-node LangGraph pipeline search Viator's live inventory and assemble a personalized 2–3 stop afternoon plan — with affiliate deep links to book immediately.
+The local demo has two paths:
 
-Built for **Agents Day 2026** · Target sponsor: **Viator Travel Tech Challenge**
-
----
-
-## Architecture
-
-```
-frontend/   Next.js → Cloudflare Pages
-backend/    FastAPI → Railway  (LangGraph pipeline + Viator API client)
-supabase/   Migrations for user_preferences, runs, viator_fixtures tables
-email-travel-parser/  Gmail parser + msgvault taste-profile smoke tests
-```
-
-### 5-node LangGraph pipeline
-
-```
-GPS coords
-  │
-  ▼
-[1] context_resolver   — Nominatim reverse geocode → city + Viator destination ID
-  │
-  ▼
-[2] profile_loader     — Supabase user_preferences → preference categories → Viator tag IDs
-  │
-  ▼
-[3] viator_searcher    — POST /products/search (location + tags) → top 15 results
-  │
-  ▼
-[4] availability_checker — POST /availability/check on top 8 → filter to available slots
-  │
-  ▼
-[5] itinerary_assembler  — score × rank → 2-3 stop plan + serendipity pick + LLM descriptions
-  │
-  ▼
-Itinerary JSON (affiliate links included from Viator API response)
-```
-
----
+- Gmail API scanner: parses Gmail messages and writes normalized rows.
+- msgvault smoke path: msgvault local archive + hybrid semantic search + Supabase taste-profile evidence tables.
 
 ## Setup
 
-### 1. Supabase
-
-Create a project at [supabase.com](https://supabase.com) and run the migration:
-
-```sql
--- paste contents of supabase/migrations/001_initial.sql into the SQL editor
-```
-
-### 2. Backend
+### 1) Python
 
 ```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+brew install pyenv
+pyenv install 3.12.3
+pyenv local 3.12.3
+```
 
+### 2) Dependencies
+
+```bash
+make install
+```
+
+### 3) Gmail OAuth credentials
+
+1. In Google Cloud Console, enable Gmail API.
+2. Create OAuth client (Web app).
+3. Set redirect URI: `http://localhost:8042/oauth/callback`
+4. Download JSON to `credentials.json` in this folder.
+5. Add your Gmail as a test user.
+6. Add scope `gmail.readonly`.
+
+### 4) Supabase
+
+Runtime writes use `.env`:
+
+```bash
 cp .env.example .env
-# fill in VIATOR_API_KEY, OPENROUTER_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY
-
-uvicorn app.main:app --reload
 ```
 
-Backend runs at `http://localhost:8000`. Test with `curl http://localhost:8000/healthz`.
+```env
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_KEY=<service_role secret key>
+SECRET_KEY=<local session secret>
+```
 
-### 3. Frontend
+For CLI migrations:
 
 ```bash
-cd frontend
-npm install
-
-cp .env.local.example .env.local
-# fill in NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_API_URL
-
-npm run dev
+supabase login
+supabase link --project-ref <project-ref>
+supabase db push
 ```
 
-Frontend runs at `http://localhost:3000`.
+### 5) msgvault + embeddings
 
-### 4. Email Taste Profile Smoke Test
-
-The `email-travel-parser/` app can scan Gmail booking emails into Supabase and
-can smoke-test the planned msgvault profile pipeline locally:
-
-```text
-Gmail API -> msgvault local SQLite archive -> Ollama embeddings ->
-msgvault hybrid search -> Supabase taste profile/evidence tables
+```bash
+curl -fsSL https://msgvault.io/install.sh | bash
+brew install ollama
+ollama serve
+ollama pull nomic-embed-text
 ```
 
-See [email-travel-parser/README.md](email-travel-parser/README.md) for the
-Supabase, Gmail OAuth, msgvault, and Ollama setup commands.
+Configure msgvault at `~/.msgvault/config.toml` for local hybrid search:
 
----
+```toml
+[data]
+data_dir = "/Users/<you>/.msgvault"
+database_url = "/Users/<you>/.msgvault/msgvault.db"
 
-## Environment variables
+[oauth]
+client_secrets = "/absolute/path/to/email-travel-parser/credentials.json"
 
-### Backend (`backend/.env`)
+[sync]
+rate_limit_qps = 5
 
-| Variable | Description |
-|----------|-------------|
-| `VIATOR_API_KEY` | Viator affiliate sandbox API key |
-| `OPENROUTER_API_KEY` | OpenRouter API key (used for LLM nodes) |
-| `SUPABASE_URL` | Supabase project URL |
-| `SUPABASE_SERVICE_KEY` | Supabase service-role key (server-side only) |
+[vector]
+enabled = true
+backend = "sqlite-vec"
 
-### Frontend (`frontend/.env.local`)
+[vector.embeddings]
+endpoint = "http://localhost:11434/v1"
+model = "nomic-embed-text"
+dimension = 768
+batch_size = 8
+max_input_chars = 4000
+```
 
-| Variable | Description |
-|----------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
-| `NEXT_PUBLIC_API_URL` | Backend URL (e.g. `https://bplanner.railway.app`) |
+Initialize msgvault and authorize Gmail:
 
----
+```bash
+msgvault init-db
+msgvault add-account you@example.com
+```
 
-## Fallback mode
+For a fast local test, sync only recent mail:
 
-If the Viator sandbox API returns fewer than 3 results or times out, the backend automatically serves a pre-built Lisbon fixture with 5 realistic products. A Supabase-cached copy of the last good API response is tried first; the in-memory fixture is the final fallback. The UI is identical — no error state shown.
+```bash
+msgvault sync-full you@example.com --query "newer_than:365d" --limit 100
+```
 
----
+Build the local vector index:
 
-## Deployment
+```bash
+msgvault build-embeddings --full-rebuild --yes
+```
 
-**Backend (Railway):** connect the `backend/` directory, set env vars, Railway auto-detects the Dockerfile.
+Domain-filtered demo sync (provider domains only, excludes private mail by
+domain):
 
-**Frontend (Cloudflare Pages):** connect the `frontend/` directory, set env vars, build command `npm run build`, output directory `.next`.
+```bash
+venv/bin/python scripts/msgvault_domain_sync.py \
+  --account email.travel.parser@gmail.com \
+  --after 2025-01-01
+```
 
----
+Show discovered domains without syncing:
 
-## Demo
+```bash
+venv/bin/python scripts/msgvault_domain_sync.py --report-only
+```
 
-1. Open the app → set preferences (or skip to use defaults: food, history, walking)
-2. Tap **Get My Plan** → allow location (or tap **Use Lisbon (demo)**)
-3. Watch 5 pipeline nodes light up in real time
-4. Tap **Book on Viator →** on any card → affiliate handoff fires
+Verify keyword and hybrid search:
 
-Full happy path: **≤ 15 seconds** from tap to itinerary.
+```bash
+msgvault search "booking" --json --limit 10
+msgvault search "cooking classes wine tasting architecture walks boutique hotels" \
+  --mode hybrid --json --limit 8 --explain
+```
+
+msgvault stores Gmail locally in `~/.msgvault/msgvault.db` and vectors locally in
+`~/.msgvault/vectors.db`.
+
+Start the msgvault MCP server (for any MCP-capable LLM client):
+
+```bash
+msgvault mcp
+```
+
+Write a smoke-test profile to Supabase from msgvault hybrid results:
+
+```bash
+export MSGVAULT_ACCOUNT="you@example.com"
+venv/bin/python scripts/msgvault_smoke_profile.py
+```
+
+The smoke script writes:
+
+- `msgvault_sources`
+- `msgvault_profile_runs`
+- `msgvault_message_evidence`
+- `user_taste_profiles`
+
+It intentionally uses the existing keyword detector, not Claude. Its purpose is
+to prove local msgvault search and Supabase persistence before the production
+Claude extraction bridge is added.
+
+## Running
+
+```bash
+make start
+```
+
+Open `http://localhost:8042`.
+
+## Railway Backend Deployment
+
+Deploy the backend from the `email-travel-parser` directory. The Docker image
+installs:
+
+- `msgvault`
+- Python dependencies
+
+At container start, `scripts/railway_start.sh`:
+
+1. Creates `MSGVAULT_HOME/config.toml` if missing.
+2. Initializes the msgvault database if needed.
+3. Starts FastAPI.
+
+Railway service settings:
+
+- Root directory: `email-travel-parser`
+- Builder: Dockerfile
+- Persistent volume mounted at `/root/.msgvault`
+
+Required backend environment:
+
+```env
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_KEY=<service_role secret key>
+SECRET_KEY=<random session secret>
+
+FRONTEND_URL=https://<cloudflare-pages-url>
+GOOGLE_REDIRECT_URI=https://<railway-backend-url>/oauth/callback
+OAUTHLIB_INSECURE_TRANSPORT=0
+SESSION_COOKIE_SAMESITE=none
+SESSION_COOKIE_SECURE=1
+
+GOOGLE_CREDENTIALS_JSON=<base64 credentials.json>
+
+OPENROUTER_API_KEY=sk-or-v1-...
+OPENROUTER_MODEL=minimax/minimax-m1
+EMBEDDING_PROVIDER=openrouter
+OPENROUTER_EMBEDDING_MODEL=openai/text-embedding-3-small
+EMBEDDING_DIMENSIONS=768
+
+MSGVAULT_HOME=/root/.msgvault
+MSGVAULT_ACCOUNT=email.travel.parser@gmail.com
+MSGVAULT_SEARCH_MODE=fts
+```
+
+After the first deploy, authorize and sync msgvault inside the Railway service
+once so `/api/profile/build` can use the server-side archive. This lightweight
+Railway setup uses msgvault full-text search for evidence retrieval and
+OpenRouter for the final 768-dimensional profile embedding:
+
+```bash
+msgvault add-account email.travel.parser@gmail.com --headless
+python scripts/msgvault_domain_sync.py \
+  --account email.travel.parser@gmail.com \
+  --after 2025-01-01
+msgvault search "cooking class wine tasting architecture walk" \
+  --account email.travel.parser@gmail.com --mode fts --json --limit 5
+```
+
+The regular Gmail scan UI does not require msgvault. The LLM-backed
+`/api/profile/build` endpoint does require the Railway msgvault archive above.
+For true msgvault hybrid search in production, configure msgvault with an
+OpenAI-compatible embedding endpoint that can authenticate to your provider,
+then set `MSGVAULT_SEARCH_MODE=hybrid` and run `msgvault build-embeddings`.
+
+## Full End-to-End Test (msgvault + Supabase)
+
+1) Full local archive sync:
+
+```bash
+msgvault sync-full email.travel.parser@gmail.com
+```
+
+2) Verify hybrid semantic retrieval:
+
+```bash
+msgvault search "travel preferences food tour museum flight hotel" \
+  --account email.travel.parser@gmail.com --mode hybrid --json --limit 8 --explain
+```
+
+3) Run one full Gmail -> Supabase ingestion pass (whole inbox):
+
+```bash
+SUPABASE_URL="https://<project-ref>.supabase.co" \
+SUPABASE_KEY="<service_role_key>" \
+GMAIL_QUERY_OVERRIDE="" \
+PYTHONPATH=. \
+venv/bin/python scripts/run_scan_once.py \
+  --token-file seed_token.json \
+  --user-email email.travel.parser@gmail.com
+```
+
+4) MCP for LLM teams:
+
+```json
+{
+  "mcpServers": {
+    "msgvault": {
+      "command": "msgvault",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Compatibility note: writer supports both:
+
+- `user_preferences(preference_id)`
+- `user_preferences(activity_keyword_id)`
+
+## Commands
+
+```bash
+make install   # install deps
+make start     # run API
+make migrate   # supabase db push
+```
