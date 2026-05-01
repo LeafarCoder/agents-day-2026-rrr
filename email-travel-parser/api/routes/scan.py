@@ -5,8 +5,7 @@ import json
 from datetime import date
 
 from fastapi import APIRouter, Request
-from fastapi.responses import StreamingResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from detection import profile as profile_builder
 from gmail.auth import credentials_from_session
@@ -15,24 +14,20 @@ from observability.logger import get
 import db.writer as writer
 import db.reader as reader
 
-templates = Jinja2Templates(directory="templates")
-
 log    = get("scan")
 router = APIRouter()
 
 
-@router.get("/scan")
+@router.get("/api/scan")
 def scan_results(request: Request):
     from googleapiclient.discovery import build
     creds = credentials_from_session(request.session)
     if not creds:
-        return RedirectResponse("/auth")
+        return JSONResponse({"error": "not_authenticated"}, status_code=401)
     service    = build("gmail", "v1", credentials=creds)
     user_email = service.users().getProfile(userId="me").execute()["emailAddress"]
     data = reader.get_scan_results(user_email)
-    return templates.TemplateResponse(
-        request, "results.html", {"profile": data, "bookings": data["bookings"] if data else []}
-    )
+    return data or {}
 
 
 def _event(step: str, msg: str, **extra) -> str:
@@ -118,7 +113,7 @@ async def scan_stream(request: Request, from_date: str, to_date: str):
 
         log.info(f"Scan  passed={len(bookings)}  skipped={skipped}  dest_missing={dest_missing}")
 
-        yield _event("saving", "Saving to database...")
+        yield _event("saving", "Finishing up...")
 
         gmail_profile = await asyncio.to_thread(
             lambda: service.users().getProfile(userId="me").execute()

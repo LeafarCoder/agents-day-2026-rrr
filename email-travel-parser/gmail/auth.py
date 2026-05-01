@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
@@ -21,8 +22,12 @@ def credentials_from_session(session: dict) -> Credentials | None:
         return None
     creds = Credentials(**data)
     if creds.expired and creds.refresh_token:
-        creds.refresh(Request())
-        save_credentials_to_session(creds, session)
+        try:
+            creds.refresh(Request())
+            save_credentials_to_session(creds, session)
+        except RefreshError:
+            session.pop("credentials", None)
+            return None
     return creds if creds.valid else None
 
 

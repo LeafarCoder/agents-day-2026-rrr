@@ -1,16 +1,22 @@
 from __future__ import annotations
 
-import glob
-
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
-from config import SECRET_KEY
+from config import FRONTEND_URL, SECRET_KEY
 from api.routes import auth, scan, preferences, profile
 
 app = FastAPI(title="Email Travel Parser")
 
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[FRONTEND_URL],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(auth.router)
 app.include_router(scan.router)

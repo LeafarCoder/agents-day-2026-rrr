@@ -116,7 +116,7 @@ def main() -> None:
                 "subject": message.get("subject"),
                 "sent_at": message.get("sent_at"),
                 "snippet": message.get("snippet"),
-                "search_query": query,
+                "query_that_found_email": query,
                 "search_rank": rank,
                 "relevance_score": hit.get("vector_score"),
                 "extracted_preferences": [

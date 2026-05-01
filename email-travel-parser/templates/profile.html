@@ -215,6 +215,10 @@
 
     document.getElementById('scan-form').addEventListener('submit', function(e) {
       e.preventDefault();
+      const submitBtn = document.querySelector('#scan-form button[type="submit"]');
+      if (submitBtn.disabled) return;
+      submitBtn.disabled = true;
+
       const from = document.getElementById('from_date').value;
       const to   = document.getElementById('to_date').value;
 
@@ -257,6 +261,7 @@
           setTimeout(() => {
             document.getElementById('loading-card').classList.remove('visible');
             document.getElementById('scan-form-card').style.display = 'block';
+            submitBtn.disabled = false;
           }, 2500);
         } else {
           setStep(step, msg, 'active');
@@ -269,6 +274,7 @@
         setTimeout(() => {
           document.getElementById('loading-card').classList.remove('visible');
           document.getElementById('scan-form-card').style.display = 'block';
+          submitBtn.disabled = false;
         }, 2500);
       };
     });

@@ -1,38 +1,27 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Form, Request
-from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
+from fastapi import APIRouter, Form
 
 from detection.config import add_category, add_keyword, get_activity_signals
 
-router    = APIRouter(prefix="/preferences")
-templates = Jinja2Templates(directory="templates")
+router = APIRouter(prefix="/api/preferences")
 
 
 @router.get("")
-def preferences_page(request: Request):
-    return templates.TemplateResponse(
-        request,
-        "preferences.html",
-        {"signals": get_activity_signals()},
-    )
+def preferences():
+    return {"signals": get_activity_signals()}
 
 
 @router.post("/categories")
-def create_category(request: Request, name: str = Form(...)):
+def create_category(name: str = Form(...)):
     name = name.strip().lower().replace(" ", "_")
     if name:
         add_category(name)
-    return RedirectResponse("/preferences", status_code=303)
+    return {"ok": True}
 
 
 @router.post("/keywords")
-def create_keyword(
-    request: Request,
-    category: str = Form(...),
-    keyword: str  = Form(...),
-):
+def create_keyword(category: str = Form(...), keyword: str = Form(...)):
     keyword  = keyword.strip().lower()
     category = category.strip()
     if keyword and category:
@@ -40,4 +29,4 @@ def create_keyword(
             add_keyword(category, keyword)
         except ValueError:
             pass
-    return RedirectResponse("/preferences", status_code=303)
+    return {"ok": True}
