@@ -16,8 +16,11 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3042}
       MSGVAULT_HOME: /root/.msgvault
       OLLAMA_HOST: http://ollama:11434
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-minimax/minimax-m1}
     depends_on:
-      - ollama
+      ollama:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:
@@ -37,7 +40,27 @@ services:
       - ollama_data:/root/.ollama
     ports:
       - "${OLLAMA_PORT:-11434}:11434"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
     restart: unless-stopped
+
+  # One-off init container: pulls nomic-embed-text on first deploy, then exits.
+  ollama-init:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    command: "ollama pull nomic-embed-text"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: "no"
 
 volumes:
   msgvault_home:

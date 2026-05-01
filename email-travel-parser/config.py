@@ -11,6 +11,9 @@ CREDENTIALS_FILE     = os.path.join(os.path.dirname(__file__), "credentials.json
 SCOPES               = ["https://www.googleapis.com/auth/gmail.readonly"]
 FRONTEND_URL         = os.environ.get("FRONTEND_URL", "http://localhost:3042")
 GOOGLE_REDIRECT_URI  = os.environ.get("GOOGLE_REDIRECT_URI", "")
+OPENROUTER_API_KEY   = os.environ.get("OPENROUTER_API_KEY", "")
+OPENROUTER_MODEL     = os.environ.get("OPENROUTER_MODEL", "minimax/minimax-m1")
+OLLAMA_HOST          = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
 # On PaaS platforms (Railway, Render) files can't be mounted — supply credentials.json
 # as base64: base64 -i credentials.json | tr -d '\n'
