@@ -4,7 +4,7 @@ import json
 import re
 import httpx
 
-from config import OPENROUTER_API_KEY, OPENROUTER_MODEL, OPENROUTER_EXTRACTION_MODEL
+from config import OPENROUTER_API_KEY, OPENROUTER_MODEL
 from observability.logger import get
 
 log = get("llm.extractor")
@@ -45,7 +45,11 @@ Respond with valid JSON only — no markdown fences, no commentary.\
 """
 
 
-def _load_json_object(text: str) -> dict:
+_BOOKING_KEYS  = {"destination_city", "destination_country", "country_code", "booking_type"}
+_PROFILE_KEYS  = {"taste_summary", "preferences"}
+
+
+def _load_json_object(text: str, prefer_keys: set[str] | None = None) -> dict:
     text = text.strip()
     try:
         result = json.loads(text)
@@ -63,12 +67,17 @@ def _load_json_object(text: str) -> dict:
             continue
         if isinstance(result, dict):
             parsed.append(result)
-    for result in parsed:
-        if "taste_summary" in result and "preferences" in result:
+
+    if not parsed:
+        raise ValueError("No JSON object found in LLM response")
+
+    # Prefer the last dict that contains any of the expected keys (reasoning models
+    # put intermediate JSON earlier in the chain-of-thought; the final answer is last).
+    keys = prefer_keys or set()
+    for result in reversed(parsed):
+        if result.keys() & keys:
             return result
-    if parsed:
-        return parsed[0]
-    raise ValueError("No JSON object found in LLM response")
+    return parsed[-1]
 
 
 def _parse_json_from_message(message: dict) -> dict:
@@ -86,7 +95,7 @@ def _parse_json_from_message(message: dict) -> dict:
     fallback: dict | None = None
     for text in candidates:
         try:
-            result = _load_json_object(text)
+            result = _load_json_object(text, prefer_keys=_PROFILE_KEYS)
         except ValueError:
             continue
         if "taste_summary" in result and "preferences" in result:
@@ -136,7 +145,7 @@ def extract_booking(subject: str, body: str) -> dict:
 
     prompt = _BOOKING_PROMPT.format(subject=subject, body=body[:4000])
 
-    log.info(f"LLM  extract_booking  model={OPENROUTER_EXTRACTION_MODEL}  subject={subject[:60]!r}")
+    log.info(f"LLM  extract_booking  model={OPENROUTER_MODEL}  subject={subject[:60]!r}")
 
     response = httpx.post(
         _OPENROUTER_URL,
@@ -147,12 +156,11 @@ def extract_booking(subject: str, body: str) -> dict:
             "X-Title": "Email Travel Parser",
         },
         json={
-            "model": OPENROUTER_EXTRACTION_MODEL,
+            "model": OPENROUTER_MODEL,
             "messages": [
                 {"role": "system", "content": _BOOKING_SYSTEM},
                 {"role": "user",   "content": prompt},
             ],
-            "response_format": {"type": "json_object"},
             "temperature": 0.1,
         },
         timeout=30.0,
@@ -160,15 +168,16 @@ def extract_booking(subject: str, body: str) -> dict:
     response.raise_for_status()
 
     message = response.json()["choices"][0]["message"]
-    # Some models return content=null and put output in reasoning.
-    raw = message.get("content") or message.get("reasoning") or ""
-    log.debug(f"LLM extract_booking raw (first 500): {raw[:500]!r}")
+    # Reasoning models (e.g. MiniMax M1) put chain-of-thought in reasoning and
+    # the final answer at the end. Concatenate both so the scanner sees everything.
+    raw = (message.get("reasoning") or "") + (message.get("content") or "")
+    log.debug(f"LLM extract_booking raw (last 500): {raw[-500:]!r}")
     try:
-        result = _load_json_object(raw)
+        result = _load_json_object(raw, prefer_keys=_BOOKING_KEYS)
         log.info(f"LLM extract_booking ok  city={result.get('destination_city')!r}  country={result.get('destination_country')!r}")
         return result
     except ValueError:
-        log.warning(f"LLM extract_booking: no JSON in response  subject={subject[:60]!r}  raw={raw[:300]!r}")
+        log.warning(f"LLM extract_booking: no JSON in response  subject={subject[:60]!r}  raw_tail={raw[-300:]!r}")
         return {}
 
 
