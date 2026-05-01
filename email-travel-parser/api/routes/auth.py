@@ -7,9 +7,13 @@ from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
 from googleapiclient.discovery import build
 
-from config import CREDENTIALS_FILE, FRONTEND_URL
+from config import CREDENTIALS_FILE, FRONTEND_URL, GOOGLE_REDIRECT_URI
 from gmail.auth import credentials_from_session, make_flow, save_credentials_to_session
 from db import reader
+
+
+def _redirect_uri(request: Request) -> str:
+    return GOOGLE_REDIRECT_URI or str(request.url_for("oauth_callback"))
 
 router = APIRouter()
 
@@ -44,7 +48,7 @@ def me(request: Request):
 def auth(request: Request):
     if not os.path.exists(CREDENTIALS_FILE):
         return {"error": "credentials.json not found"}
-    flow = make_flow(redirect_uri=str(request.url_for("oauth_callback")))
+    flow = make_flow(redirect_uri=_redirect_uri(request))
     auth_url, state = flow.authorization_url(
         access_type="offline",
         prompt="consent",
@@ -56,7 +60,7 @@ def auth(request: Request):
 
 @router.get("/oauth/callback", name="oauth_callback")
 def oauth_callback(request: Request):
-    flow = make_flow(redirect_uri=str(request.url_for("oauth_callback")))
+    flow = make_flow(redirect_uri=_redirect_uri(request))
     flow.state = request.session.get("oauth_state")
     flow.code_verifier = request.session.get("code_verifier")
     flow.fetch_token(authorization_response=str(request.url))

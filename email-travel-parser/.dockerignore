@@ -1,0 +1,17 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+.env.*
+!.env.example
+credentials.json
+token.json
+seed_token.json
+*.token.json
+frontend/node_modules/
+frontend/.next/
+.git/
+.DS_Store
+supabase/.temp/
+data/custom_categories.json
