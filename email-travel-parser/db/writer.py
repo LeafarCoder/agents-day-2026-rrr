@@ -58,7 +58,12 @@ def persist(user_email: str, bookings: list[dict], profile: dict) -> None:
     destination_travel: dict[str, str] = {}
     unique_destinations = {b["destination"] for b in bookings if b["destination"]}
     for dest in unique_destinations:
-        country = _infer_country_from_city(dest)
+        # Prefer LLM-extracted country; fall back to hardcoded city hints.
+        sample = next((b for b in bookings if b["destination"] == dest), {})
+        if sample.get("country") and sample.get("country_code"):
+            country = {"name": sample["country"], "code": sample["country_code"].upper()[:2]}
+        else:
+            country = _infer_country_from_city(dest)
         country_id = _get_or_create_country(db, country)
         city_id   = _get_or_create_city(db, dest, country_id)
         travel_id = _get_or_create_travel(db, user_id, city_id, dest, bookings)
@@ -174,9 +179,10 @@ def _insert_emails(
     for b in bookings:
         travel_id = destination_travel.get(b["destination"]) if b["destination"] else None
         payload: dict = {
-            "user_id":      user_id,
-            "gmail_msg_id": b["id"],
-            "subject":      b["subject"],
+            "user_id":        user_id,
+            "gmail_msg_id":   b["id"],
+            "subject":        b["subject"],
+            "llm_extraction": b.get("llm_extraction"),
         }
         if b["domain"]:
             payload["sender_domain"] = b["domain"]

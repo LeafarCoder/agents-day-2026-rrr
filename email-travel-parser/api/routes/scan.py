@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from detection import profile as profile_builder
 from gmail.auth import credentials_from_session
 from gmail import fetcher, parser
+from llm import extractor as llm_extractor
 from observability.logger import get
 import db.writer as writer
 import db.reader as reader
@@ -57,20 +58,20 @@ async def scan_stream(request: Request, from_date: str, to_date: str):
 
         yield _event("fetching", f"Found {len(messages)} candidate emails", count=len(messages))
 
-        bookings           = []
-        skipped            = 0
-        dest_from_subject  = 0
-        dest_from_body     = 0
-        dest_missing       = 0
+        bookings      = []
+        skipped       = 0
+        llm_cached    = 0
+        llm_extracted = 0
+        dest_missing  = 0
 
         for i, msg_ref in enumerate(messages):
             meta    = await asyncio.to_thread(fetcher.get_metadata, service, msg_ref["id"])
             headers = {h["name"]: h["value"] for h in meta.get("payload", {}).get("headers", [])}
 
-            domain  = parser.extract_sender_domain(headers.get("From", ""))
-            subject = headers.get("Subject", "")
-
+            domain   = parser.extract_sender_domain(headers.get("From", ""))
+            subject  = headers.get("Subject", "")
             raw_date = parser.parse_date(headers.get("Date", ""))
+
             if raw_date:
                 email_date = date.fromisoformat(raw_date)
                 if not (since <= email_date <= until):
@@ -88,29 +89,42 @@ async def scan_stream(request: Request, from_date: str, to_date: str):
                 total=len(messages),
             )
 
-            destination = parser.extract_destination(subject)
-            body_text   = ""
+            # Always fetch full body — needed for activity detection and LLM extraction.
+            full      = await asyncio.to_thread(fetcher.get_full, service, msg_ref["id"])
+            body_text = parser.decode_body(full.get("payload", {}))
+
+            # Use cached LLM result if this email was already processed in a prior scan.
+            cached = await asyncio.to_thread(reader.get_email_extraction, msg_ref["id"])
+            if cached is not None:
+                extraction = cached
+                llm_cached += 1
+            else:
+                extraction = await asyncio.to_thread(
+                    llm_extractor.extract_booking, subject, body_text
+                )
+                llm_extracted += 1
+
+            destination  = extraction.get("destination_city") or None
+            country      = extraction.get("destination_country") or None
+            country_code = extraction.get("country_code") or None
+            booking_type = extraction.get("booking_type") or None
 
             if not destination:
-                full      = await asyncio.to_thread(fetcher.get_full, service, msg_ref["id"])
-                body_text = parser.decode_body(full.get("payload", {}))
-                destination = parser.extract_destination(body_text)
-                if destination:
-                    dest_from_body += 1
-                else:
-                    dest_missing += 1
-            else:
-                dest_from_subject += 1
+                dest_missing += 1
 
             text = subject + " " + body_text
             bookings.append({
-                "id":           msg_ref["id"],
-                "date":         raw_date,
-                "domain":       domain,
-                "subject":      subject,
-                "destination":  destination,
-                "activities":   parser.detect_activities(text),
-                "keyword_hits": parser.detect_activity_keywords(text),
+                "id":             msg_ref["id"],
+                "date":           raw_date,
+                "domain":         domain,
+                "subject":        subject,
+                "destination":    destination,
+                "country":        country,
+                "country_code":   country_code,
+                "booking_type":   booking_type,
+                "llm_extraction": extraction,
+                "activities":     parser.detect_activities(text),
+                "keyword_hits":   parser.detect_activity_keywords(text),
             })
 
         yield _event(
@@ -120,7 +134,11 @@ async def scan_stream(request: Request, from_date: str, to_date: str):
 
         profile = profile_builder.build(bookings)
 
-        log.info(f"Scan  passed={len(bookings)}  skipped={skipped}  dest_missing={dest_missing}")
+        log.info(
+            f"Scan  passed={len(bookings)}  skipped={skipped}"
+            f"  llm_cached={llm_cached}  llm_extracted={llm_extracted}"
+            f"  dest_missing={dest_missing}"
+        )
 
         yield _event("saving", "Finishing up...")
 

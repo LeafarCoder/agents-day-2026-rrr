@@ -100,6 +100,70 @@ def _parse_json_from_message(message: dict) -> dict:
     raise ValueError("LLM response did not include JSON content")
 
 
+_BOOKING_SYSTEM = """\
+You are a travel booking parser. Extract structured information from email subjects and bodies.
+Return valid JSON only — no markdown fences, no commentary.\
+"""
+
+_BOOKING_PROMPT = """\
+Extract travel booking details from this email.
+
+Subject: {subject}
+
+Body:
+{body}
+
+Return a JSON object with exactly these fields:
+{{
+  "is_travel_booking": <true if this is a confirmed travel booking, false otherwise>,
+  "destination_city": "<primary destination city name or null>",
+  "destination_country": "<full country name in English or null>",
+  "country_code": "<ISO 3166-1 alpha-2 two-letter code or null>",
+  "start_date": "<YYYY-MM-DD or null>",
+  "end_date": "<YYYY-MM-DD or null>",
+  "booking_type": "<flight|hotel|activity|transport|other or null>"
+}}
+
+Focus on the city the traveler is going TO (not the origin). If multiple destinations, pick the primary one.
+Respond with valid JSON only.\
+"""
+
+
+def extract_booking(subject: str, body: str) -> dict:
+    """Extract destination, country, dates and booking type from a single email body."""
+    prompt = _BOOKING_PROMPT.format(subject=subject, body=body[:4000])
+
+    log.info(f"LLM  extract_booking  subject={subject[:60]!r}")
+
+    response = httpx.post(
+        _OPENROUTER_URL,
+        headers={
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://email-travel-parser",
+            "X-Title": "Email Travel Parser",
+        },
+        json={
+            "model": OPENROUTER_MODEL,
+            "messages": [
+                {"role": "system", "content": _BOOKING_SYSTEM},
+                {"role": "user",   "content": prompt},
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": 0.1,
+        },
+        timeout=30.0,
+    )
+    response.raise_for_status()
+
+    raw = response.json()["choices"][0]["message"].get("content", "")
+    try:
+        return _load_json_object(raw)
+    except ValueError:
+        log.warning(f"LLM extract_booking: no JSON in response  subject={subject[:60]!r}")
+        return {}
+
+
 def extract_preferences(evidence_emails: list[dict]) -> dict:
     """Send evidence emails to MiniMax via OpenRouter and return structured preferences."""
     lines = []
