@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+import asyncio
+import json
+from datetime import date
 
-from fastapi import APIRouter, Form, Request
-from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
-from googleapiclient.discovery import build
+from fastapi import APIRouter, Request
+from fastapi.responses import StreamingResponse, RedirectResponse
 
 from detection import profile as profile_builder
 from gmail.auth import credentials_from_session
@@ -13,127 +13,105 @@ from gmail import fetcher, parser
 from observability.logger import get
 import db.writer as writer
 
-log       = get("scan")
-router    = APIRouter()
-templates = Jinja2Templates(directory="templates")
+log    = get("scan")
+router = APIRouter()
 
 
-def _scrape(service, since: date, until: date) -> tuple[list[dict], dict]:
-    messages = fetcher.fetch_messages(service, since, until)
+def _event(step: str, msg: str, **extra) -> str:
+    return f"data: {json.dumps({'step': step, 'msg': msg, **extra})}\n\n"
 
-    bookings               = []
-    skipped_both_gates     = 0
-    dest_from_subject      = 0
-    dest_from_body         = 0
-    dest_missing           = 0
-    body_fetches           = 0
 
-    log.info(f"── Filtering  candidates={len(messages)}")
+@router.get("/scan/stream")
+async def scan_stream(request: Request, from_date: str, to_date: str):
+    async def generate():
+        from googleapiclient.discovery import build
 
-    for msg_ref in messages:
-        meta    = fetcher.get_metadata(service, msg_ref["id"])
-        headers = {h["name"]: h["value"] for h in meta.get("payload", {}).get("headers", [])}
+        yield _event("auth", "Connecting to Gmail...")
 
-        domain  = parser.extract_sender_domain(headers.get("From", ""))
-        subject = headers.get("Subject", "")
+        creds = credentials_from_session(request.session)
+        if not creds:
+            yield _event("error", "Not authenticated — please reconnect.")
+            return
 
-        if not domain and not parser.is_confirmation(subject):
-            skipped_both_gates += 1
-            continue
+        since = date.fromisoformat(from_date)
+        until = date.fromisoformat(to_date)
 
-        destination = parser.extract_destination(subject)
-        body_text   = ""
+        service = await asyncio.to_thread(build, "gmail", "v1", credentials=creds)
 
-        if not destination:
-            full        = fetcher.get_full(service, msg_ref["id"])
-            body_text   = parser.decode_body(full.get("payload", {}))
-            destination = parser.extract_destination(body_text)
-            body_fetches += 1
-            if destination:
-                dest_from_body += 1
+        yield _event("fetching", f"Searching emails from {since} to {until}...")
+
+        messages = await asyncio.to_thread(fetcher.fetch_messages, service, since, until)
+
+        yield _event("fetching", f"Found {len(messages)} candidate emails", count=len(messages))
+
+        bookings           = []
+        skipped            = 0
+        dest_from_subject  = 0
+        dest_from_body     = 0
+        dest_missing       = 0
+
+        for i, msg_ref in enumerate(messages):
+            meta    = await asyncio.to_thread(fetcher.get_metadata, service, msg_ref["id"])
+            headers = {h["name"]: h["value"] for h in meta.get("payload", {}).get("headers", [])}
+
+            domain  = parser.extract_sender_domain(headers.get("From", ""))
+            subject = headers.get("Subject", "")
+
+            if not domain and not parser.is_confirmation(subject):
+                skipped += 1
+                continue
+
+            yield _event(
+                "parsing",
+                f"Scanning {i + 1}/{len(messages)}: {subject[:55]}",
+                current=i + 1,
+                total=len(messages),
+            )
+
+            destination = parser.extract_destination(subject)
+            body_text   = ""
+
+            if not destination:
+                full      = await asyncio.to_thread(fetcher.get_full, service, msg_ref["id"])
+                body_text = parser.decode_body(full.get("payload", {}))
+                destination = parser.extract_destination(body_text)
+                if destination:
+                    dest_from_body += 1
+                else:
+                    dest_missing += 1
             else:
-                dest_missing += 1
-        else:
-            dest_from_subject += 1
+                dest_from_subject += 1
 
-        bookings.append({
-            "id":          msg_ref["id"],
-            "date":        parser.parse_date(headers.get("Date", "")),
-            "domain":      domain,
-            "subject":     subject,
-            "destination": destination,
-            "activities":  parser.detect_activities(subject + " " + body_text),
-        })
+            bookings.append({
+                "id":          msg_ref["id"],
+                "date":        parser.parse_date(headers.get("Date", "")),
+                "domain":      domain,
+                "subject":     subject,
+                "destination": destination,
+                "activities":  parser.detect_activities(subject + " " + body_text),
+            })
 
-    log.info(
-        f"── Filter results  "
-        f"passed={len(bookings)}  "
-        f"skipped={skipped_both_gates}  "
-        f"body_fetches={body_fetches}"
-    )
-    log.info(
-        f"── Destination extraction  "
-        f"from_subject={dest_from_subject}  "
-        f"from_body={dest_from_body}  "
-        f"missing={dest_missing}"
-    )
+        yield _event(
+            "profiling",
+            f"Building preference profile from {len(bookings)} confirmed bookings...",
+        )
 
-    profile = profile_builder.build(bookings)
+        profile = profile_builder.build(bookings)
 
-    unique_destinations = len(profile["destinations_visited"])
-    unique_platforms    = len(profile["platforms_used"])
-    top_activities      = profile["top_categories"]
-    activity_counts     = profile["activity_preferences"]
+        log.info(f"Scan  passed={len(bookings)}  skipped={skipped}  dest_missing={dest_missing}")
 
-    log.info(
-        f"── Profile  "
-        f"bookings={profile['total_bookings']}  "
-        f"destinations={unique_destinations}  "
-        f"platforms={unique_platforms}"
-    )
-    log.info(f"── Top categories  {top_activities}")
+        yield _event("saving", "Saving to database...")
 
-    if activity_counts:
-        log.info("── Activity breakdown")
-        for cat, count in activity_counts.items():
-            intensity = profile["preference_intensity"].get(cat, "")
-            log.info(f"     {cat:<30} count={count}  [{intensity}]")
+        gmail_profile = await asyncio.to_thread(
+            lambda: service.users().getProfile(userId="me").execute()
+        )
+        user_email = gmail_profile["emailAddress"]
+        await asyncio.to_thread(writer.persist, user_email, bookings, profile)
 
-    log.info("── Last 10 subjects")
-    for b in bookings[-10:]:
-        log.info(f"     [{b['date'] or '????-??-??'}]  {b['domain'] or 'personal':>20}  {b['subject'][:60]}")
+        yield _event("done", f"Done — {len(bookings)} bookings saved.", bookings=len(bookings))
 
-    return bookings, profile
-
-
-@router.post("/scan")
-def scan(
-    request: Request,
-    from_date: str = Form(...),
-    to_date:   str = Form(...),
-):
-    creds = credentials_from_session(request.session)
-    if not creds:
-        return RedirectResponse("/auth", status_code=303)
-
-    since = date.fromisoformat(from_date)
-    until = date.fromisoformat(to_date)
-
-    log.info("═" * 60)
-    log.info(f"Scan started  since={since}  until={until}")
-    service           = build("gmail", "v1", credentials=creds)
-    bookings, profile = _scrape(service, since, until)
-
-    gmail_profile = service.users().getProfile(userId="me").execute()
-    user_email    = gmail_profile["emailAddress"]
-    log.info(f"── Persisting to Supabase  user={user_email}")
-    writer.persist(user_email, bookings, profile)
-
-    log.info("Scan complete")
-    log.info("═" * 60)
-
-    return templates.TemplateResponse(
-        request,
-        "results.html",
-        {"profile": profile, "bookings": bookings},
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
