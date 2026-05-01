@@ -12,18 +12,41 @@ from detection.config import (
 )
 
 _DESTINATION_PATTERNS = [
+    # "your trip/stay/flight to London" or "your Airbnb in Paris"
     re.compile(
         r"(?:your\s+(?:airbnb|stay|trip|booking|reservation|hotel|room|flight)\s+"
         r"(?:in|to|at))\s+([A-Z][a-zA-Z\s,]{2,40}?)(?:\s+is\s+confirmed|\s+-|\s*\||\s*$)",
         re.IGNORECASE,
     ),
+    # "confirmed/confirmation ... in/to/at City"
     re.compile(
         r"(?:confirmed|confirmation).*?(?:in|to|at)\s+([A-Z][a-zA-Z\s]{2,30}?)(?:\s*[-,\|]|\s*$)",
         re.IGNORECASE,
     ),
+    # "traveling/travelling to City"
     re.compile(
         r"(?:traveling|travelling)\s+to\s+([A-Z][a-zA-Z\s]{2,30}?)(?:\s*[-,\|]|\s*$)",
         re.IGNORECASE,
+    ),
+    # Arrow routes: "LIS → London LHR" or "Lisbon → Seville" — take destination (after →)
+    re.compile(
+        r"→\s+([A-Z][a-zA-Z\s]{2,30?})(?:\s+[A-Z]{3}\b|\s*[-–,\|]|\s*$)",
+    ),
+    # "Confirmed: Marrakech private cooking class" — city is first word(s) after label
+    re.compile(
+        r"(?:Confirmed|Booking confirmed)[:\s\-–]+([A-Z][a-zA-Z\s]{2,25?})"
+        r"(?=\s+(?:private|public|walking|boat|city|cooking|desert|whale|surf|kayak|"
+        r"architecture|museum|cultural|night|wine|food|jazz|art|heritage|island|coastal))",
+    ),
+    # "booking confirmed: Algarve resort / Tuscany villa" — city before lodging noun
+    re.compile(
+        r"(?:confirmed|booking)[:\s\-–]+([A-Z][a-zA-Z\s]{2,25?})"
+        r"(?=\s+(?:resort|hotel|hostel|villa|apartment|house|cottage|estate|inn|lodge))",
+        re.IGNORECASE,
+    ),
+    # Trailing region/city after comma: "wine estate, Alentejo"
+    re.compile(
+        r",\s+([A-Z][a-zA-Z\s]{2,25})\s*$",
     ),
 ]
 

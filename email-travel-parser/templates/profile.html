@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Travel Profile</title>
+  <style>
+    * { box-sizing: border-box; }
+    body  { font-family: system-ui, sans-serif; max-width: 760px; margin: 60px auto; padding: 0 24px; color: #1a1a1a; }
+    h1    { font-size: 1.8rem; margin-bottom: 4px; }
+    h2    { font-size: 0.85rem; text-transform: uppercase; letter-spacing: .07em; color: #999; margin: 40px 0 12px; border-bottom: 1px solid #eee; padding-bottom: 6px; }
+    nav   { margin-bottom: 40px; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; }
+    nav a { color: #4285f4; text-decoration: none; margin-right: 16px; }
+    .meta { color: #888; font-size: 0.85rem; margin: 2px 0; }
+
+    /* buttons */
+    .btn { display: inline-block; padding: 10px 20px; border-radius: 6px; font-size: 0.95rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; }
+    .btn-primary   { background: #4285f4; color: #fff; }
+    .btn-primary:hover   { background: #3367d6; }
+    .btn-secondary { background: #e8eaed; color: #444; }
+    .btn-secondary:hover { background: #dadce0; }
+
+    /* scan form */
+    .scan-card { background: #f8f9fa; border-radius: 10px; padding: 20px 24px; margin-top: 24px; }
+    .scan-card h3 { font-size: 1rem; margin: 0 0 14px; }
+    .date-row  { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+    .date-field { display: flex; flex-direction: column; gap: 4px; }
+    .date-field label { font-size: 0.8rem; color: #666; font-weight: 500; }
+    .date-field input { padding: 7px 10px; border: 1px solid #dadce0; border-radius: 6px; font-size: 0.9rem; }
+    .form-actions { display: flex; gap: 10px; margin-top: 16px; align-items: center; }
+
+    /* stats */
+    .stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+    .stat     { background: #f8f9fa; border-radius: 8px; padding: 14px 18px; min-width: 130px; }
+    .stat-val { font-size: 1.5rem; font-weight: 700; }
+    .stat-lbl { font-size: 0.78rem; color: #999; margin-top: 2px; }
+
+    /* preferences */
+    .pref-grid { display: flex; flex-direction: column; gap: 12px; }
+    .pref-row  { display: flex; align-items: center; gap: 12px; }
+    .pref-name { width: 190px; font-size: 0.9rem; text-transform: capitalize; flex-shrink: 0; }
+    .bar-wrap  { flex: 1; background: #eee; border-radius: 4px; height: 8px; }
+    .bar       { height: 8px; border-radius: 4px; }
+    .bar.strong   { background: #1a73e8; width: 100%; }
+    .bar.moderate { background: #4285f4; width: 60%; }
+    .bar.weak     { background: #a8c7fa; width: 25%; }
+    .pref-badge   { font-size: 0.75rem; color: #999; width: 62px; text-align: right; flex-shrink: 0; }
+    .kw-list   { display: flex; flex-wrap: wrap; gap: 5px; margin: 5px 0 0 190px; }
+    .kw        { background: #e8f0fe; color: #1a73e8; border-radius: 4px; padding: 2px 7px; font-size: 0.75rem; }
+
+    /* destinations */
+    table  { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th     { text-align: left; padding: 8px 10px; color: #777; font-weight: 500; border-bottom: 2px solid #eee; }
+    td     { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; }
+    tr:last-child td { border-bottom: none; }
+
+    .empty { color: #bbb; font-style: italic; font-size: 0.9rem; }
+
+    /* connect screen */
+    .connect-hero { text-align: center; margin-top: 60px; }
+    .connect-hero p { color: #666; max-width: 420px; margin: 12px auto 28px; line-height: 1.6; }
+    .tag  { display: inline-block; background: #e8f0fe; color: #1a73e8; border-radius: 4px; padding: 2px 8px; font-size: 0.8rem; margin: 3px 2px; }
+  </style>
+</head>
+<body>
+  <nav>
+    <div><a href="/">Travel Profile</a><a href="/preferences">Categories</a></div>
+    {% if connected %}<a href="/disconnect" class="btn btn-secondary" style="padding:6px 14px;font-size:0.85rem;">Disconnect</a>{% endif %}
+  </nav>
+
+  {% if not connected %}
+    <div class="connect-hero">
+      <h1>Travel Preference Scraper</h1>
+      <p>Connect your Gmail and we'll scan booking confirmation emails from Airbnb, Booking.com, Ryanair, Viator, and 30+ other travel brands to build your preference profile.</p>
+      <p>
+        <span class="tag">Read-only access</span>
+        <span class="tag">Nothing stored server-side</span>
+      </p>
+      <a href="/auth" class="btn btn-primary">Connect Gmail</a>
+    </div>
+
+  {% else %}
+    <h1>Travel Profile</h1>
+    {% if user_email %}<p class="meta">{{ user_email }}</p>{% endif %}
+    {% if profile and profile.user.last_scanned_at %}
+      <p class="meta">Last scanned: {{ profile.user.last_scanned_at[:10] }}</p>
+    {% endif %}
+
+    <div class="scan-card">
+      <h3>Run parser</h3>
+      <form method="post" action="/scan">
+        <div class="date-row">
+          <div class="date-field">
+            <label for="from_date">From</label>
+            <input type="date" id="from_date" name="from_date" value="{{ default_from }}" required />
+          </div>
+          <div class="date-field">
+            <label for="to_date">To</label>
+            <input type="date" id="to_date" name="to_date" value="{{ default_to }}" required />
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Scan emails</button>
+        </div>
+      </form>
+    </div>
+
+    {% if not profile %}
+      <p class="empty" style="margin-top:32px;">No profile yet — run a scan above.</p>
+    {% else %}
+
+      <div class="stat-row">
+        <div class="stat"><div class="stat-val">{{ profile.email_count }}</div><div class="stat-lbl">Emails scanned</div></div>
+        <div class="stat"><div class="stat-val">{{ profile.travels | length }}</div><div class="stat-lbl">Destinations</div></div>
+        <div class="stat"><div class="stat-val">{{ profile.preferences | length }}</div><div class="stat-lbl">Preference types</div></div>
+      </div>
+
+      <h2>Activity Preferences</h2>
+      {% if profile.preferences %}
+        <div class="pref-grid">
+          {% for cat, data in profile.preferences.items() %}
+          <div>
+            <div class="pref-row">
+              <span class="pref-name">{{ cat.replace("_", " ") }}</span>
+              <div class="bar-wrap"><div class="bar {{ data.intensity }}"></div></div>
+              <span class="pref-badge">{{ data.intensity }}</span>
+            </div>
+            <div class="kw-list">
+              {% for kw in data.keywords %}<span class="kw">{{ kw }}</span>{% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="empty">No preferences inferred yet.</p>
+      {% endif %}
+
+      <h2>Destinations</h2>
+      {% if profile.travels %}
+        <table>
+          <thead><tr><th>City</th><th>From</th><th>To</th></tr></thead>
+          <tbody>
+            {% for t in profile.travels %}
+            <tr>
+              <td>{{ t.cities.name if t.cities else t.title }}</td>
+              <td>{{ t.start_date or "—" }}</td>
+              <td>{{ t.end_date or "—" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="empty">No destinations recorded yet.</p>
+      {% endif %}
+
+    {% endif %}
+  {% endif %}
+</body>
+</html>

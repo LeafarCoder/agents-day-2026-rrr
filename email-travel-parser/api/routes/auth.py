@@ -6,9 +6,11 @@ from datetime import date, timedelta
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
+from googleapiclient.discovery import build
 
 from config import CREDENTIALS_FILE
 from gmail.auth import credentials_from_session, make_flow, save_credentials_to_session
+from db import reader
 
 router    = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -16,14 +18,28 @@ templates = Jinja2Templates(directory="templates")
 
 @router.get("/")
 def index(request: Request):
-    connected   = credentials_from_session(request.session) is not None
-    today       = date.today()
-    default_to  = today.isoformat()
-    default_from = (today - timedelta(days=365)).isoformat()
+    creds     = credentials_from_session(request.session)
+    connected = creds is not None
+    today     = date.today()
+
+    profile_data = None
+    user_email   = None
+
+    if connected:
+        service    = build("gmail", "v1", credentials=creds)
+        user_email = service.users().getProfile(userId="me").execute()["emailAddress"]
+        profile_data = reader.get_profile(user_email)
+
     return templates.TemplateResponse(
         request,
-        "index.html",
-        {"connected": connected, "default_from": default_from, "default_to": default_to},
+        "profile.html",
+        {
+            "connected":    connected,
+            "user_email":   user_email,
+            "profile":      profile_data,
+            "default_from": (today - timedelta(days=365)).isoformat(),
+            "default_to":   today.isoformat(),
+        },
     )
 
 
