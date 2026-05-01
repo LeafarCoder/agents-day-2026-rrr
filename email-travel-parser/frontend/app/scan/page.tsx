@@ -4,7 +4,22 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { API_URL } from '@/lib/api'
 
-type Booking = { date: string; domain: string; destination: string | null; subject: string }
+type Booking = {
+  id: string | null
+  date: string
+  domain: string
+  destination: string | null
+  subject: string
+  city: string | null
+  country: string | null
+  country_code: string | null
+  start_date: string | null
+  end_date: string | null
+  trip_label: string | null
+  booking_type: string | null
+  is_travel_booking: boolean | null
+  keyword_hits: Record<string, string[]>
+}
 type Profile = {
   last_scanned?: string
   email_count?: number
@@ -14,11 +29,144 @@ type Profile = {
 }
 type ScanData = { profile: Profile | null; bookings: Booking[] }
 
+function flagEmoji(code: string) {
+  return [...code.toUpperCase()].map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('')
+}
+
+function BookingModal({ booking, onClose }: { booking: Booking; onClose: () => void }) {
+  const hasTrip = booking.city || booking.country || booking.start_date
+  const hasKeywords = Object.keys(booking.keyword_hits ?? {}).length > 0
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 50,
+        background: 'rgba(0,0,0,0.5)',
+        backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1.5rem',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        className="glass fade-in"
+        style={{
+          borderRadius: 'var(--radius-xl)',
+          padding: '1.75rem',
+          width: '100%', maxWidth: 480,
+          border: '1px solid var(--border)',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.3)',
+          maxHeight: '85vh',
+          overflowY: 'auto',
+          display: 'flex', flexDirection: 'column', gap: '1.25rem',
+        }}
+      >
+        {/* Header */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+            {booking.booking_type && (
+              <span style={{
+                fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase',
+                color: 'var(--text-accent)', background: 'rgba(0,212,170,0.1)',
+                border: '1px solid rgba(0,212,170,0.25)', borderRadius: 'var(--radius-sm)',
+                padding: '0.15rem 0.45rem',
+              }}>
+                {booking.booking_type}
+              </span>
+            )}
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{booking.domain}</span>
+            {booking.date && (
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>{booking.date}</span>
+            )}
+          </div>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', fontWeight: 600, color: 'var(--text)', margin: 0, lineHeight: 1.35 }}>
+            {booking.subject}
+          </h2>
+        </div>
+
+        {/* Trip */}
+        {hasTrip && (
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.1rem' }}>
+            <div style={{ fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+              Trip
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+              {(booking.city || booking.country) && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Destination</span>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--text)', fontWeight: 500 }}>
+                    {booking.country_code ? flagEmoji(booking.country_code) + ' ' : ''}
+                    {[booking.city, booking.country].filter(Boolean).join(', ')}
+                  </span>
+                </div>
+              )}
+              {booking.start_date && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Check-in</span>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--text)' }}>{booking.start_date}</span>
+                </div>
+              )}
+              {booking.end_date && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Check-out</span>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--text)' }}>{booking.end_date}</span>
+                </div>
+              )}
+              {booking.trip_label && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Duration</span>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--text-accent)' }}>{booking.trip_label}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Activity keywords */}
+        {hasKeywords && (
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.1rem' }}>
+            <div style={{ fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+              Activity Signals
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              {Object.entries(booking.keyword_hits).map(([cat, kws]) => (
+                <div key={cat} style={{ display: 'flex', alignItems: 'baseline', gap: '0.6rem' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', minWidth: 100, textTransform: 'capitalize' }}>
+                    {cat.replace(/_/g, ' ')}
+                  </span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                    {kws.map(kw => (
+                      <span key={kw} style={{
+                        fontSize: '0.7rem', color: 'var(--text)',
+                        background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.18)',
+                        borderRadius: 'var(--radius-sm)', padding: '0.15rem 0.45rem',
+                      }}>{kw}</span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={onClose}
+          style={{ alignSelf: 'flex-start', marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function ScanResultsPage() {
   const [data, setData] = useState<ScanData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [page, setPage] = useState(1)
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
 
   useEffect(() => {
     fetch(`${API_URL}/api/scan`, { credentials: 'include' })
@@ -158,8 +306,11 @@ export default function ScanResultsPage() {
             </thead>
             <tbody>
               {pageBookings.map((b, i) => (
-                <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'background 150ms' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
+                <tr
+                  key={i}
+                  onClick={() => setSelectedBooking(b)}
+                  style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'background 150ms', cursor: 'pointer' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
                   <td style={{ padding: '0.8rem 1rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{b.date}</td>
@@ -194,6 +345,10 @@ export default function ScanResultsPage() {
           </div>
         )}
       </div>
+
+      {selectedBooking && (
+        <BookingModal booking={selectedBooking} onClose={() => setSelectedBooking(null)} />
+      )}
     </div>
   )
 }
