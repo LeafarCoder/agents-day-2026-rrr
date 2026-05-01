@@ -14,6 +14,7 @@ Built for **Agents Day 2026** · Target sponsor: **Viator Travel Tech Challenge*
 frontend/   Next.js → Cloudflare Pages
 backend/    FastAPI → Railway  (LangGraph pipeline + Viator API client)
 supabase/   Migrations for user_preferences, runs, viator_fixtures tables
+email-travel-parser/  Gmail parser + msgvault taste-profile smoke tests
 ```
 
 ### 5-node LangGraph pipeline
@@ -81,6 +82,19 @@ npm run dev
 ```
 
 Frontend runs at `http://localhost:3000`.
+
+### 4. Email Taste Profile Smoke Test
+
+The `email-travel-parser/` app can scan Gmail booking emails into Supabase and
+can smoke-test the planned msgvault profile pipeline locally:
+
+```text
+Gmail API -> msgvault local SQLite archive -> Ollama embeddings ->
+msgvault hybrid search -> Supabase taste profile/evidence tables
+```
+
+See [email-travel-parser/README.md](email-travel-parser/README.md) for the
+Supabase, Gmail OAuth, msgvault, and Ollama setup commands.
 
 ---
 
