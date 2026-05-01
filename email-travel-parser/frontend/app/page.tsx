@@ -48,6 +48,18 @@ export default function DashboardPage() {
   const [selectedCity, setSelectedCity] = useState<{ countryCode: string; cityName: string } | null>(null)
   const [expCache, setExpCache] = useState<Record<string, TripData[]>>({})
   const [expLoading, setExpLoading] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  async function deleteAllData() {
+    if (!confirm('Delete all your data? This cannot be undone.')) return
+    setDeleting(true)
+    try {
+      await fetch(`${API_URL}/api/me`, { method: 'DELETE', credentials: 'include' })
+      window.location.href = '/'
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   async function selectCity(countryCode: string, cityName: string) {
     const key = `${countryCode}:${cityName}`
@@ -215,9 +227,14 @@ export default function DashboardPage() {
           </h1>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>{me.user_email}</p>
         </div>
-        <a href={`${API_URL}/disconnect`} className="btn btn-ghost" style={{ fontSize: '0.78rem' }}>
-          Disconnect
-        </a>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button onClick={deleteAllData} disabled={deleting} className="btn btn-ghost" style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            {deleting ? 'Deleting...' : 'Delete all data'}
+          </button>
+          <a href={`${API_URL}/disconnect`} className="btn btn-ghost" style={{ fontSize: '0.78rem' }}>
+            Disconnect
+          </a>
+        </div>
       </div>
 
       {/* Scan card */}

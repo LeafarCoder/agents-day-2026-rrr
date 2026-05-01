@@ -9,7 +9,7 @@ from googleapiclient.discovery import build
 
 from config import CREDENTIALS_FILE, FRONTEND_URL, GOOGLE_CREDENTIALS_ERROR, GOOGLE_REDIRECT_URI
 from gmail.auth import credentials_from_session, make_flow, save_credentials_to_session
-from db import reader
+from db import reader, writer
 
 
 def _redirect_uri(request: Request) -> str:
@@ -42,6 +42,22 @@ def me(request: Request):
         "default_from": (today - timedelta(days=365)).isoformat(),
         "default_to": today.isoformat(),
     }
+
+
+@router.delete("/api/me")
+def delete_me(request: Request):
+    creds = credentials_from_session(request.session)
+    if not creds:
+        return {"error": "not_authenticated"}
+    try:
+        service = build("gmail", "v1", credentials=creds)
+        user_email = service.users().getProfile(userId="me").execute()["emailAddress"]
+    except Exception:
+        request.session.pop("credentials", None)
+        return {"error": "failed_to_resolve_user"}
+    writer.delete_user(user_email)
+    request.session.clear()
+    return {"deleted": True, "email": user_email}
 
 
 @router.get("/auth")

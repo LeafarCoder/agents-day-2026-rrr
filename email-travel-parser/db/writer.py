@@ -43,6 +43,12 @@ _CITY_COUNTRY_HINTS: dict[str, tuple[str, str]] = {
 }
 
 
+def delete_user(user_email: str) -> bool:
+    db = get_client()
+    res = db.table("users").delete().eq("email", user_email).execute()
+    return len(res.data) > 0
+
+
 def persist(user_email: str, bookings: list[dict], profile: dict) -> None:
     db = get_client()
 
