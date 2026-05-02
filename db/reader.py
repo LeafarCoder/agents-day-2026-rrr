@@ -219,7 +219,11 @@ def get_country_experiences(user_email: str, country_code: str) -> dict | None:
     return {"country": {"name": country_name, "code": country_code}, "trips": trips}
 
 
-def get_scan_results(user_email: str) -> dict | None:
+def get_scan_results(
+    user_email: str,
+    from_date: str | None = None,
+    to_date: str | None = None,
+) -> dict | None:
     profile = get_profile(user_email)
     if not profile:
         return None
@@ -227,13 +231,17 @@ def get_scan_results(user_email: str) -> dict | None:
     db      = get_client()
     user_id = profile["user"]["id"]
 
-    emails_res = (
+    query = (
         db.table("emails")
         .select("gmail_msg_id, subject, sender_domain, email_date, llm_extraction, travels(title, start_date, end_date, cities(name, countries(name, code)))")
         .eq("user_id", user_id)
         .order("email_date", desc=True)
-        .execute()
     )
+    if from_date:
+        query = query.gte("email_date", from_date)
+    if to_date:
+        query = query.lte("email_date", to_date)
+    emails_res = query.execute()
 
     from collections import Counter, defaultdict
     from gmail.parser import detect_activity_keywords
@@ -292,16 +300,29 @@ def get_scan_results(user_email: str) -> dict | None:
 
     destinations = sorted({b["destination"] for b in bookings if b["destination"]})
 
-    raw_prefs: dict = profile.get("preferences") or {}
-    preferences_summary = {cat: data["total"] for cat, data in raw_prefs.items()}
+    # When filtering by date, compute preferences from the filtered emails' keyword hits
+    # rather than using the cumulative user_preferences table.
+    if from_date or to_date:
+        pref_counts: dict[str, int] = {}
+        for b in bookings:
+            for cat in (b["keyword_hits"] or {}):
+                pref_counts[cat] = pref_counts.get(cat, 0) + len(b["keyword_hits"][cat])
+        preferences_summary = pref_counts
+        email_count = len(bookings)
+    else:
+        raw_prefs: dict = profile.get("preferences") or {}
+        preferences_summary = {cat: data["total"] for cat, data in raw_prefs.items()}
+        email_count = profile.get("email_count") or len(bookings)
 
     return {
         "profile": {
             "last_scanned": profile["user"].get("last_scanned_at"),
-            "email_count":  profile.get("email_count") or len(bookings),
+            "email_count":  email_count,
             "destinations": destinations,
             "preferences":  preferences_summary,
             "platforms":    dict(platforms.most_common()),
+            "from_date":    from_date,
+            "to_date":      to_date,
         },
         "bookings":      bookings,
         "trips_by_year": dict(sorted(trips_by_year.items())),

@@ -40,14 +40,18 @@ def _fetch_full(creds, msg_id):
 
 
 @router.get("/api/scan")
-def scan_results(request: Request):
+def scan_results(
+    request: Request,
+    from_date: str | None = None,
+    to_date: str | None = None,
+):
     from googleapiclient.discovery import build
     creds = credentials_from_session(request.session)
     if not creds:
         return JSONResponse({"error": "not_authenticated"}, status_code=401)
     service    = build("gmail", "v1", credentials=creds)
     user_email = service.users().getProfile(userId="me").execute()["emailAddress"]
-    data = reader.get_scan_results(user_email)
+    data = reader.get_scan_results(user_email, from_date=from_date, to_date=to_date)
     return data or {}
 
 

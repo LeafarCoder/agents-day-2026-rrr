@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { API_URL } from '@/lib/api'
 
@@ -26,11 +27,17 @@ type Profile = {
   destinations?: string[]
   preferences?: Record<string, number>
   platforms?: Record<string, number>
+  from_date?: string | null
+  to_date?: string | null
 }
 type ScanData = { profile: Profile | null; bookings: Booking[] }
 
 function flagEmoji(code: string) {
   return [...code.toUpperCase()].map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('')
+}
+
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 function BookingModal({ booking, onClose }: { booking: Booking; onClose: () => void }) {
@@ -161,7 +168,12 @@ function BookingModal({ booking, onClose }: { booking: Booking; onClose: () => v
   )
 }
 
-export default function ScanResultsPage() {
+function ScanResultsContent() {
+  const searchParams = useSearchParams()
+  const fromParam = searchParams.get('from')
+  const toParam   = searchParams.get('to')
+  const isScanView = !!(fromParam && toParam)
+
   const [data, setData] = useState<ScanData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -169,7 +181,11 @@ export default function ScanResultsPage() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
 
   useEffect(() => {
-    fetch(`${API_URL}/api/scan`, { credentials: 'include' })
+    const url = isScanView
+      ? `${API_URL}/api/scan?from_date=${fromParam}&to_date=${toParam}`
+      : `${API_URL}/api/scan`
+
+    fetch(url, { credentials: 'include' })
       .then(r => {
         if (r.status === 401) { window.location.href = '/'; return null }
         return r.json()
@@ -177,7 +193,7 @@ export default function ScanResultsPage() {
       .then(d => { if (d) setData(d) })
       .catch(() => setError('Failed to load results.'))
       .finally(() => setLoading(false))
-  }, [])
+  }, [isScanView, fromParam, toParam])
 
   /* ── Loading ──────────────────────────────────────────────────── */
   if (loading) {
@@ -217,9 +233,18 @@ export default function ScanResultsPage() {
         </Link>
         <div className="glass" style={{ borderRadius: 'var(--radius-xl)', padding: '3rem', textAlign: 'center' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🗺️</div>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--text)', marginBottom: '0.5rem' }}>No results yet</h2>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>Run a scan from your profile page to see booking history here.</p>
-          <Link href="/" className="btn btn-primary">Go to Profile</Link>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--text)', marginBottom: '0.5rem' }}>
+            {isScanView ? 'No bookings found in this date range' : 'No results yet'}
+          </h2>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+            {isScanView
+              ? `No booking confirmation emails were found between ${fmtDate(fromParam!)} and ${fmtDate(toParam!)}.`
+              : 'Scan your emails to see booking history here.'}
+          </p>
+          {isScanView
+            ? <Link href="/scan" className="btn btn-ghost" style={{ fontSize: '0.82rem', marginRight: '0.75rem' }}>View all results</Link>
+            : null}
+          <Link href="/email-scan" className="btn btn-primary">Scan Emails</Link>
         </div>
       </div>
     )
@@ -230,21 +255,70 @@ export default function ScanResultsPage() {
     <div style={{ padding: '88px 1.5rem 4rem', maxWidth: 760, margin: '0 auto' }}>
 
       {/* Header */}
-      <div className="fade-up" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
-        <div>
-          <Link href="/" style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.75rem' }}>
-            ← Profile
-          </Link>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.8rem, 4vw, 2.5rem)', fontWeight: 600, color: 'var(--text)', margin: 0, lineHeight: 1.15 }}>
-            Scan Results
-          </h1>
+      <div className="fade-up" style={{ marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+          {isScanView
+            ? <Link href="/scan" style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                ← All results
+              </Link>
+            : <Link href="/" style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                ← Profile
+              </Link>}
         </div>
-        {profile?.last_scanned && (
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', paddingTop: '2rem', flexShrink: 0 }}>
-            {new Date(profile.last_scanned).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-          </span>
-        )}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '1rem', flexWrap: 'wrap' }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.8rem, 4vw, 2.5rem)', fontWeight: 600, color: 'var(--text)', margin: 0, lineHeight: 1.15 }}>
+            {isScanView ? 'Scan Results' : 'All Results'}
+          </h1>
+          {profile?.last_scanned && !isScanView && (
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', flexShrink: 0 }}>
+              Last scan {fmtDate(profile.last_scanned)}
+            </span>
+          )}
+        </div>
       </div>
+
+      {/* Scan parameters banner — only in scan view */}
+      {isScanView && fromParam && toParam && (
+        <div className="fade-up glass-subtle" style={{
+          borderRadius: 'var(--radius-lg)', padding: '0.875rem 1.25rem',
+          marginBottom: '1.25rem',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap',
+          border: '1px solid rgba(0,212,170,0.18)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span style={{
+              fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase',
+              color: 'var(--text-accent)', background: 'rgba(0,212,170,0.1)',
+              border: '1px solid rgba(0,212,170,0.25)', borderRadius: 'var(--radius-sm)',
+              padding: '0.2rem 0.5rem', flexShrink: 0,
+            }}>
+              Scan
+            </span>
+            <span style={{ fontSize: '0.82rem', color: 'var(--text)' }}>
+              {fmtDate(fromParam)} → {fmtDate(toParam)}
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <Link
+              href={`/email-scan`}
+              style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+            >
+              Scan again
+            </Link>
+            <span style={{ width: 1, height: 14, background: 'var(--border)' }} />
+            <Link
+              href="/scan"
+              style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+            >
+              View all results →
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Stats grid */}
       <div className="fade-up d-100" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
@@ -350,5 +424,26 @@ export default function ScanResultsPage() {
         <BookingModal booking={selectedBooking} onClose={() => setSelectedBooking(null)} />
       )}
     </div>
+  )
+}
+
+function LoadingSkeleton() {
+  return (
+    <div style={{ padding: '88px 1.5rem 4rem', maxWidth: 760, margin: '0 auto' }}>
+      <div style={{ height: 28, width: 120, marginBottom: '2rem' }} className="skeleton" />
+      <div style={{ height: 48, width: '60%', marginBottom: '0.75rem' }} className="skeleton" />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.75rem', margin: '2rem 0' }}>
+        {[...Array(4)].map((_, i) => <div key={i} style={{ height: 80 }} className="skeleton" />)}
+      </div>
+      <div style={{ height: 300 }} className="skeleton" />
+    </div>
+  )
+}
+
+export default function ScanResultsPage() {
+  return (
+    <Suspense fallback={<LoadingSkeleton />}>
+      <ScanResultsContent />
+    </Suspense>
   )
 }

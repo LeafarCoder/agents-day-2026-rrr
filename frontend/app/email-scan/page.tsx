@@ -65,7 +65,7 @@ export default function EmailScanPage() {
       if (event.step === 'done') {
         es.close()
         setScanning(false)
-        setTimeout(() => { window.location.href = '/scan' }, 600)
+        setTimeout(() => { window.location.href = `/scan?from=${fromDate}&to=${toDate}` }, 600)
       }
       if (event.step === 'error') {
         es.close()
