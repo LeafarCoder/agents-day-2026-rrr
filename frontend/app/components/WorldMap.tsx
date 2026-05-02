@@ -68,7 +68,8 @@ export default function WorldMap({
           <Geography
             key={geo.rsmKey}
             geography={geo}
-            onClick={() => visited && setSelected(country!)}
+            tabIndex={-1}
+            onClick={visited ? () => setSelected(country!) : undefined}
             style={{
               default: {
                 fill: visited ? 'rgba(0,212,170,0.22)' : 'rgba(255,255,255,0.05)',
@@ -166,7 +167,7 @@ export default function WorldMap({
         <div
           onClick={() => setSelected(null)}
           style={{
-            position: 'fixed', inset: 0, zIndex: 60,
+            position: 'fixed', inset: 0, zIndex: 80,
             background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: '1.5rem',
@@ -254,7 +255,7 @@ export default function WorldMap({
       {fullscreen && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 70,
-          background: 'var(--bg)',
+          background: '#080f1a',
           display: 'flex', flexDirection: 'column',
         }}>
           <div style={{
@@ -276,7 +277,7 @@ export default function WorldMap({
               Close
             </button>
           </div>
-          <div style={{ flex: 1, overflow: 'hidden', background: 'rgba(8,15,26,0.8)' }}>
+          <div style={{ flex: 1, overflow: 'hidden', background: '#080f1a' }}>
             <MapCanvas zoomable={true} />
           </div>
           <div style={{ padding: '0.6rem 1.5rem', borderTop: '1px solid var(--border)', fontSize: '0.68rem', color: 'var(--text-muted)', opacity: 0.4, textAlign: 'center' }}>
