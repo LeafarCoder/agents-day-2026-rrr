@@ -609,7 +609,7 @@ export default function DashboardPage() {
 
           {/* Country view — card grid (default) */}
           {visitGroup === 'country' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.875rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '0.875rem' }}>
               {countries.map((country, i) => (
                 <div
                   key={country.name}
@@ -679,7 +679,7 @@ export default function DashboardPage() {
                     <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text)' }}>{continent}</span>
                     <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{list.length} {list.length === 1 ? 'country' : 'countries'}</span>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.875rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '0.875rem' }}>
                     {list.map((country, i) => (
                       <div
                         key={country.name}
