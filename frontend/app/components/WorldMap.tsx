@@ -262,7 +262,7 @@ export default function WorldMap({
             padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', flexShrink: 0,
           }}>
             <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-              Places Visited — {countries.length} {countries.length === 1 ? 'country' : 'countries'}
+              World Map — {countries.length} {countries.length === 1 ? 'country' : 'countries'}
             </span>
             <button
               onClick={() => setFullscreen(false)}

@@ -563,75 +563,6 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          {/* Preference drilldown */}
-          {prefs.length > 0 && (
-            <div className="fade-up d-300 glass" style={{ borderRadius: 'var(--radius-xl)', padding: '1.5rem' }}>
-              <h2 style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '1.25rem' }}>
-                Activity Preferences
-              </h2>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {prefs.map(([category, data], i) => {
-                  const isOpen = openPrefs.has(category)
-                  const toggle = () => setOpenPrefs(prev => {
-                    const next = new Set(prev)
-                    isOpen ? next.delete(category) : next.add(category)
-                    return next
-                  })
-                  return (
-                    <div key={category} className={`fade-in d-${Math.min(i + 1, 6) * 100 as 100 | 200 | 300 | 400 | 500 | 600}`}
-                      style={{ borderBottom: '1px solid var(--border)' }}>
-                      <button
-                        onClick={toggle}
-                        style={{
-                          width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                          padding: '0.7rem 0', background: 'none', border: 'none', cursor: 'pointer',
-                        }}
-                      >
-                        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)', textTransform: 'capitalize' }}>
-                          {category.replace(/_/g, ' ')}
-                        </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
-                            {data.total}
-                          </span>
-                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true"
-                            style={{ color: 'var(--text-muted)', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }}>
-                            <path d="M1.5 3.5l3.5 3 3.5-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        </div>
-                      </button>
-                      {isOpen && (
-                        <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: '0.6rem' }}>
-                          {[...data.keywords].sort((a, b) => b.count - a.count).map(kw => (
-                            <div key={kw.keyword} style={{
-                              display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
-                              padding: '0.2rem 0.4rem', margin: '0 -0.4rem',
-                              borderRadius: 'var(--radius-sm)',
-                            }}>
-                              <span style={{ fontSize: '0.78rem', color: 'var(--text)' }}>{kw.keyword}</span>
-                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{kw.count}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-
-              <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-                <Link href="/scan" style={{ fontSize: '0.8rem', color: 'var(--text-accent)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
-                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-                >
-                  View full results
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                    <path d="M2.5 6h7M6 2.5l3.5 3.5L6 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </Link>
-              </div>
-            </div>
-          )}
         </>
       )}
 
@@ -812,6 +743,76 @@ export default function DashboardPage() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Activity Preferences */}
+      {prefs.length > 0 && (
+        <div className="fade-up d-300 glass" style={{ borderRadius: 'var(--radius-xl)', padding: '1.5rem', marginTop: '1.5rem' }}>
+          <h2 style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '1.25rem' }}>
+            Activity Preferences
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {prefs.map(([category, data], i) => {
+              const isOpen = openPrefs.has(category)
+              const toggle = () => setOpenPrefs(prev => {
+                const next = new Set(prev)
+                isOpen ? next.delete(category) : next.add(category)
+                return next
+              })
+              return (
+                <div key={category} className={`fade-in d-${Math.min(i + 1, 6) * 100 as 100 | 200 | 300 | 400 | 500 | 600}`}
+                  style={{ borderBottom: '1px solid var(--border)' }}>
+                  <button
+                    onClick={toggle}
+                    style={{
+                      width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '0.7rem 0', background: 'none', border: 'none', cursor: 'pointer',
+                    }}
+                  >
+                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)', textTransform: 'capitalize' }}>
+                      {category.replace(/_/g, ' ')}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                        {data.total}
+                      </span>
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true"
+                        style={{ color: 'var(--text-muted)', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }}>
+                        <path d="M1.5 3.5l3.5 3 3.5-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                  </button>
+                  {isOpen && (
+                    <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: '0.6rem' }}>
+                      {[...data.keywords].sort((a, b) => b.count - a.count).map(kw => (
+                        <div key={kw.keyword} style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+                          padding: '0.2rem 0.4rem', margin: '0 -0.4rem',
+                          borderRadius: 'var(--radius-sm)',
+                        }}>
+                          <span style={{ fontSize: '0.78rem', color: 'var(--text)' }}>{kw.keyword}</span>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{kw.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+            <Link href="/scan" style={{ fontSize: '0.8rem', color: 'var(--text-accent)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+            >
+              View full results
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                <path d="M2.5 6h7M6 2.5l3.5 3.5L6 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </Link>
+          </div>
         </div>
       )}
 
