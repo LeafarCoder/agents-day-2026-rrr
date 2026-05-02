@@ -136,9 +136,16 @@ def _get_or_create_city(db, name: str, country_id: str) -> str:
 def _get_or_create_travel(
     db, user_id: str, city_id: str, dest: str, bookings: list[dict]
 ) -> str:
-    dest_dates = sorted(b["date"] for b in bookings if b["destination"] == dest and b["date"])
-    start_date = dest_dates[0] if dest_dates else None
-    end_date   = dest_dates[-1] if dest_dates else None
+    dest_bookings = [b for b in bookings if b["destination"] == dest]
+
+    # Prefer LLM-extracted travel dates; fall back to email date for start only.
+    # Never derive end_date from email timestamps — it produces false trip durations.
+    llm_starts = sorted(b["start_date"] for b in dest_bookings if b.get("start_date"))
+    llm_ends   = sorted(b["end_date"]   for b in dest_bookings if b.get("end_date"))
+    email_dates = sorted(b["date"] for b in dest_bookings if b.get("date"))
+
+    start_date = llm_starts[0] if llm_starts else (email_dates[0] if email_dates else None)
+    end_date   = llm_ends[-1]  if llm_ends   else None
 
     res = (
         db.table("travels")

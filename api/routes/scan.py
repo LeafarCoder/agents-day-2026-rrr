@@ -130,6 +130,8 @@ async def scan_stream(
                         "country":        extraction.get("destination_country") or None,
                         "country_code":   extraction.get("country_code") or None,
                         "booking_type":   extraction.get("booking_type") or None,
+                        "start_date":     extraction.get("start_date") or None,
+                        "end_date":       extraction.get("end_date") or None,
                         "llm_extraction": extraction or None,
                         "activities":     extraction.get("categories") or [],
                         "keyword_hits":   extraction.get("keyword_hits") or {},
