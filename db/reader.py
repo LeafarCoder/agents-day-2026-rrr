@@ -287,11 +287,22 @@ def get_scan_results(user_email: str) -> dict | None:
     for b in bookings:
         if b["date"]:
             trips_by_year[b["date"][:4]] += 1
-        platforms[b["domain"]] += 1
+        if b["domain"] and b["domain"] != "unknown":
+            platforms[b["domain"]] += 1
+
+    destinations = sorted({b["destination"] for b in bookings if b["destination"]})
+
+    raw_prefs: dict = profile.get("preferences") or {}
+    preferences_summary = {cat: data["total"] for cat, data in raw_prefs.items()}
 
     return {
-        **profile,
+        "profile": {
+            "last_scanned": profile["user"].get("last_scanned_at"),
+            "email_count":  profile.get("email_count") or len(bookings),
+            "destinations": destinations,
+            "preferences":  preferences_summary,
+            "platforms":    dict(platforms.most_common()),
+        },
         "bookings":      bookings,
         "trips_by_year": dict(sorted(trips_by_year.items())),
-        "platforms_used": dict(platforms.most_common()),
     }
