@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from '@vnedyalk0v/react19-simple-maps'
+import worldTopology from '../../public/world-110m.json'
 
 // ISO 3166-1 numeric (zero-padded 3-digit string) → alpha-2
 const N2A: Record<string, string> = {
@@ -41,7 +42,6 @@ function flagEmoji(code: string) {
   ).join('')
 }
 
-const GEO_URL = '/world-110m.json'
 
 export default function WorldMap({
   countries,
@@ -104,10 +104,10 @@ export default function WorldMap({
       >
         {zoomable ? (
           <ZoomableGroup>
-            <Geographies geography={GEO_URL}>{renderGeos}</Geographies>
+            <Geographies geography={worldTopology}>{renderGeos}</Geographies>
           </ZoomableGroup>
         ) : (
-          <Geographies geography={GEO_URL}>{renderGeos}</Geographies>
+          <Geographies geography={worldTopology}>{renderGeos}</Geographies>
         )}
       </ComposableMap>
     )

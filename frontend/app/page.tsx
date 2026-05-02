@@ -566,6 +566,54 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Places visited cards */}
+      {countries.length > 0 && (
+        <div className="fade-up d-400" style={{ marginTop: '1.5rem' }}>
+          <div style={{ marginBottom: '1rem' }}>
+            <h2 style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
+              Places Visited
+            </h2>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '0.25rem 0 0', opacity: 0.6 }}>
+              Click a city to view trip details
+            </p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.875rem' }}>
+            {countries.map((country, i) => (
+              <div
+                key={country.name}
+                className={`fade-up d-${Math.min(i + 1, 6) * 100 as 100|200|300|400|500|600} glass-subtle`}
+                style={{ borderRadius: 'var(--radius-lg)', padding: '1.1rem 1.25rem', border: '1px solid var(--border)' }}
+              >
+                <h3 style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span aria-hidden="true">{flagEmoji(country.code)}</span>
+                  {country.name}
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                  {country.cities.map(city => (
+                    <div
+                      key={city.name}
+                      className="city-row"
+                      onClick={() => selectCity(country.code, city.name)}
+                      style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem',
+                        padding: '0.4rem 0.6rem', margin: '0 -0.6rem',
+                      }}
+                    >
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text)' }}>{city.name}</span>
+                      {city.visits.length > 0 && (
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', flexShrink: 0 }}>
+                          {city.visits[0]}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Experiences popup */}
       {selectedCity && (
         <div
