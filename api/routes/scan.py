@@ -14,6 +14,7 @@ from llm import extractor as llm_extractor
 from observability.logger import get
 import db.writer as writer
 import db.reader as reader
+from config import LLM_CONCURRENCY
 
 log    = get("scan")
 router = APIRouter()
@@ -64,77 +65,97 @@ async def scan_stream(
 
             yield _event("fetching", f"Found {len(messages)} candidate emails", count=len(messages))
 
+            semaphore = asyncio.Semaphore(LLM_CONCURRENCY)
+
+            async def process_one(msg_ref: dict) -> tuple[dict | None, str, str]:
+                """Return (booking_or_None, subject, status) where status ∈ {skip, cached, extracted}."""
+                async with semaphore:
+                    meta    = await asyncio.to_thread(fetcher.get_metadata, service, msg_ref["id"])
+                    headers = {h["name"]: h["value"] for h in meta.get("payload", {}).get("headers", [])}
+
+                    domain   = parser.extract_sender_domain(headers.get("From", ""))
+                    subject  = headers.get("Subject", "")
+                    raw_date = parser.parse_date(headers.get("Date", ""))
+
+                    if raw_date:
+                        email_date = date.fromisoformat(raw_date)
+                        if not (since <= email_date <= until):
+                            return None, subject, "skip"
+
+                    if not domain and not parser.is_confirmation(subject):
+                        return None, subject, "skip"
+
+                    full      = await asyncio.to_thread(fetcher.get_full, service, msg_ref["id"])
+                    body_text = parser.decode_body(full.get("payload", {}))
+
+                    extraction: dict = {}
+                    status = "extracted"
+                    try:
+                        cached = await asyncio.to_thread(reader.get_email_extraction, msg_ref["id"])
+                        if cached is not None:
+                            extraction = cached
+                            status = "cached"
+                        else:
+                            extraction = await asyncio.to_thread(
+                                llm_extractor.extract_booking, subject, body_text
+                            )
+                    except Exception as exc:
+                        log.exception(f"LLM extraction failed  msg={msg_ref['id']}  err={exc}")
+
+                    booking = {
+                        "id":             msg_ref["id"],
+                        "date":           raw_date,
+                        "domain":         domain,
+                        "subject":        subject,
+                        "destination":    extraction.get("destination_city") or None,
+                        "country":        extraction.get("destination_country") or None,
+                        "country_code":   extraction.get("country_code") or None,
+                        "booking_type":   extraction.get("booking_type") or None,
+                        "llm_extraction": extraction or None,
+                        "activities":     extraction.get("categories") or [],
+                        "keyword_hits":   extraction.get("keyword_hits") or {},
+                    }
+                    return booking, subject, status
+
+            tasks = [asyncio.create_task(process_one(msg_ref)) for msg_ref in messages]
+
             bookings      = []
             skipped       = 0
             llm_cached    = 0
             llm_extracted = 0
             dest_missing  = 0
+            done          = 0
 
-            for i, msg_ref in enumerate(messages):
-                meta    = await asyncio.to_thread(fetcher.get_metadata, service, msg_ref["id"])
-                headers = {h["name"]: h["value"] for h in meta.get("payload", {}).get("headers", [])}
-
-                domain   = parser.extract_sender_domain(headers.get("From", ""))
-                subject  = headers.get("Subject", "")
-                raw_date = parser.parse_date(headers.get("Date", ""))
-
-                if raw_date:
-                    email_date = date.fromisoformat(raw_date)
-                    if not (since <= email_date <= until):
-                        skipped += 1
-                        continue
-
-                if not domain and not parser.is_confirmation(subject):
+            for future in asyncio.as_completed(tasks):
+                done += 1
+                try:
+                    booking, subject, status = await future
+                except Exception as exc:
+                    log.exception(f"process_one unexpected error: {exc}")
                     skipped += 1
+                    yield _event("parsing", f"Scanning {done}/{len(messages)}: error", current=done, total=len(messages))
                     continue
 
-                yield _event(
-                    "parsing",
-                    f"Scanning {i + 1}/{len(messages)}: {subject[:55]}",
-                    current=i + 1,
-                    total=len(messages),
-                )
+                if booking is None:
+                    skipped += 1
+                    yield _event("parsing", f"Scanning {done}/{len(messages)}: skipped", current=done, total=len(messages))
+                    continue
 
-                # Fetch full body for LLM extraction.
-                full      = await asyncio.to_thread(fetcher.get_full, service, msg_ref["id"])
-                body_text = parser.decode_body(full.get("payload", {}))  # passed to LLM
+                if status == "cached":
+                    llm_cached += 1
+                else:
+                    llm_extracted += 1
 
-                # Use cached LLM result if this email was already processed in a prior scan.
-                extraction: dict = {}
-                try:
-                    cached = await asyncio.to_thread(reader.get_email_extraction, msg_ref["id"])
-                    if cached is not None:
-                        extraction = cached
-                        llm_cached += 1
-                    else:
-                        extraction = await asyncio.to_thread(
-                            llm_extractor.extract_booking, subject, body_text
-                        )
-                        llm_extracted += 1
-                except Exception as exc:
-                    log.exception(f"LLM extraction failed  msg={msg_ref['id']}  err={exc}")
-
-                destination  = extraction.get("destination_city") or None
-                country      = extraction.get("destination_country") or None
-                country_code = extraction.get("country_code") or None
-                booking_type = extraction.get("booking_type") or None
-
-                if not destination:
+                if not booking.get("destination"):
                     dest_missing += 1
 
-                bookings.append({
-                    "id":             msg_ref["id"],
-                    "date":           raw_date,
-                    "domain":         domain,
-                    "subject":        subject,
-                    "destination":    destination,
-                    "country":        country,
-                    "country_code":   country_code,
-                    "booking_type":   booking_type,
-                    "llm_extraction": extraction or None,
-                    "activities":     extraction.get("categories") or [],
-                    "keyword_hits":   extraction.get("keyword_hits") or {},
-                })
+                bookings.append(booking)
+                yield _event(
+                    "parsing",
+                    f"Scanning {done}/{len(messages)}: {subject[:55]}",
+                    current=done,
+                    total=len(messages),
+                )
 
             yield _event(
                 "profiling",

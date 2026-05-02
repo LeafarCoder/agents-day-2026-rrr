@@ -18,6 +18,7 @@ OLLAMA_HOST          = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 EMBEDDING_PROVIDER   = os.environ.get("EMBEDDING_PROVIDER", "openrouter")
 OPENROUTER_EMBEDDING_MODEL = os.environ.get("OPENROUTER_EMBEDDING_MODEL", "openai/text-embedding-3-small")
 EMBEDDING_DIMENSIONS = int(os.environ.get("EMBEDDING_DIMENSIONS", "768"))
+LLM_CONCURRENCY      = int(os.environ.get("LLM_CONCURRENCY", "5"))
 SESSION_COOKIE_SAMESITE = os.environ.get("SESSION_COOKIE_SAMESITE", "lax")
 SESSION_COOKIE_SECURE   = os.environ.get("SESSION_COOKIE_SECURE", "0") == "1"
 

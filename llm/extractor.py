@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 import httpx
 
 from config import OPENROUTER_API_KEY, OPENROUTER_MODEL
@@ -171,38 +172,52 @@ def extract_booking(subject: str, body: str) -> dict:
 
     log.info(f"LLM  extract_booking  model={OPENROUTER_MODEL}  subject={subject[:60]!r}")
 
-    response = httpx.post(
-        _OPENROUTER_URL,
-        headers={
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://email-travel-parser",
-            "X-Title": "Email Travel Parser",
-        },
-        json={
-            "model": OPENROUTER_MODEL,
-            "messages": [
-                {"role": "system", "content": _BOOKING_SYSTEM},
-                {"role": "user",   "content": prompt},
-            ],
-            "temperature": 0.1,
-        },
-        timeout=30.0,
-    )
-    response.raise_for_status()
+    for attempt in range(5):
+        response = httpx.post(
+            _OPENROUTER_URL,
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://email-travel-parser",
+                "X-Title": "Email Travel Parser",
+            },
+            json={
+                "model": OPENROUTER_MODEL,
+                "messages": [
+                    {"role": "system", "content": _BOOKING_SYSTEM},
+                    {"role": "user",   "content": prompt},
+                ],
+                "temperature": 0.1,
+            },
+            timeout=30.0,
+        )
 
-    message = response.json()["choices"][0]["message"]
-    # Reasoning models (e.g. MiniMax M1) put chain-of-thought in reasoning and
-    # the final answer at the end. Concatenate both so the scanner sees everything.
-    raw = (message.get("reasoning") or "") + (message.get("content") or "")
-    log.debug(f"LLM extract_booking raw (last 500): {raw[-500:]!r}")
-    try:
-        result = _load_json_object(raw, prefer_keys=_BOOKING_KEYS)
-        log.info(f"LLM extract_booking ok  city={result.get('destination_city')!r}  country={result.get('destination_country')!r}")
-        return result
-    except ValueError:
-        log.warning(f"LLM extract_booking: no JSON in response  subject={subject[:60]!r}  raw_tail={raw[-300:]!r}")
-        return {}
+        if response.status_code == 429:
+            wait = min(4 * (2 ** attempt), 60)
+            retry_after = response.headers.get("Retry-After", "")
+            if retry_after.isdigit():
+                wait = max(wait, int(retry_after))
+            log.warning(f"LLM 429 rate-limited  attempt={attempt + 1}/5  backing_off={wait}s  subject={subject[:40]!r}")
+            time.sleep(wait)
+            continue
+
+        response.raise_for_status()
+
+        message = response.json()["choices"][0]["message"]
+        # Reasoning models (e.g. MiniMax M1) put chain-of-thought in reasoning and
+        # the final answer at the end. Concatenate both so the scanner sees everything.
+        raw = (message.get("reasoning") or "") + (message.get("content") or "")
+        log.debug(f"LLM extract_booking raw (last 500): {raw[-500:]!r}")
+        try:
+            result = _load_json_object(raw, prefer_keys=_BOOKING_KEYS)
+            log.info(f"LLM extract_booking ok  city={result.get('destination_city')!r}  country={result.get('destination_country')!r}")
+            return result
+        except ValueError:
+            log.warning(f"LLM extract_booking: no JSON in response  subject={subject[:60]!r}  raw_tail={raw[-300:]!r}")
+            return {}
+
+    log.error(f"LLM extract_booking: exhausted retries after 429s  subject={subject[:60]!r}")
+    return {}
 
 
 def extract_preferences(evidence_emails: list[dict]) -> dict:
