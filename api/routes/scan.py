@@ -7,6 +7,7 @@ from datetime import date
 
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
+from googleapiclient.errors import HttpError
 
 from detection import profile as profile_builder
 from gmail.auth import credentials_from_session
@@ -93,7 +94,13 @@ async def scan_stream(
             async def process_one(msg_ref: dict) -> tuple[dict | None, str, str]:
                 """Return (booking_or_None, subject, status) where status ∈ {skip, cached, extracted}."""
                 async with semaphore:
-                    meta    = await asyncio.to_thread(_fetch_metadata, creds, msg_ref["id"])
+                    try:
+                        meta = await asyncio.to_thread(_fetch_metadata, creds, msg_ref["id"])
+                    except HttpError as exc:
+                        if exc.resp.status == 404:
+                            return None, "", "skip"
+                        raise
+
                     headers = {h["name"]: h["value"] for h in meta.get("payload", {}).get("headers", [])}
 
                     domain   = parser.extract_sender_domain(headers.get("From", ""))
@@ -108,7 +115,12 @@ async def scan_stream(
                     if not domain and not parser.is_confirmation(subject):
                         return None, subject, "skip"
 
-                    full      = await asyncio.to_thread(_fetch_full, creds, msg_ref["id"])
+                    try:
+                        full = await asyncio.to_thread(_fetch_full, creds, msg_ref["id"])
+                    except HttpError as exc:
+                        if exc.resp.status == 404:
+                            return None, subject, "skip"
+                        raise
                     body_text = parser.decode_body(full.get("payload", {}))
 
                     extraction: dict = {}
