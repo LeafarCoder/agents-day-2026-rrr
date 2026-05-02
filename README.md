@@ -165,6 +165,13 @@ make start
 
 Open `http://localhost:8042`.
 
+## Deployments
+
+| Service | Platform | Account |
+|---|---|---|
+| Backend API | Railway | email.travel.parser@gmail.com |
+| Frontend | Cloudflare Pages | email.travel.parser@gmail.com |
+
 ## Railway Backend Deployment
 
 Deploy the backend from the repo root. The Docker image
