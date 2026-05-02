@@ -43,7 +43,7 @@ const CONTINENT_MAP: Record<string, string> = {
   PL:'Europe',CZ:'Europe',HU:'Europe',RO:'Europe',GR:'Europe',HR:'Europe',SI:'Europe',
   SK:'Europe',BG:'Europe',RS:'Europe',ME:'Europe',BA:'Europe',MK:'Europe',AL:'Europe',
   UA:'Europe',BY:'Europe',LT:'Europe',LV:'Europe',EE:'Europe',IS:'Europe',IE:'Europe',
-  LU:'Europe',MT:'Europe',CY:'Europe',TR:'Europe',MD:'Europe',GE:'Europe',AM:'Europe',AZ:'Europe',
+  LU:'Europe',MT:'Europe',CY:'Europe',TR:'Europe',MD:'Europe',GE:'Europe',AM:'Europe',AZ:'Europe',MC:'Europe',SM:'Europe',LI:'Europe',AD:'Europe',
   JP:'Asia',CN:'Asia',KR:'Asia',TH:'Asia',VN:'Asia',ID:'Asia',MY:'Asia',SG:'Asia',
   PH:'Asia',IN:'Asia',NP:'Asia',LK:'Asia',MV:'Asia',MM:'Asia',KH:'Asia',LA:'Asia',
   BN:'Asia',TW:'Asia',HK:'Asia',MO:'Asia',BD:'Asia',PK:'Asia',AF:'Asia',IR:'Asia',
@@ -299,7 +299,7 @@ export default function DashboardPage() {
 
       {/* Places visited cards */}
       {countries.length > 0 && (
-        <div className="fade-up d-400" style={{ marginTop: '1.5rem', width: 'min(1100px, calc(100vw - 3rem))', position: 'relative', left: '50%', transform: 'translateX(-50%)' }}>
+        <div className="fade-up d-400" style={{ marginTop: '1.5rem', width: 'min(1100px, calc(100vw - 3rem))', marginLeft: 'min(0px, calc((100% - min(1100px, calc(100vw - 3rem))) / 2))' }}>
           {/* Header + group-by tabs */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem', gap: '0.75rem', flexWrap: 'wrap' }}>
             <div>
@@ -333,12 +333,12 @@ export default function DashboardPage() {
 
           {/* Country view — card grid (default) */}
           {visitGroup === 'country' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.875rem' }}>
+            <div style={{ columns: '4 240px', columnGap: '0.875rem' }}>
               {countries.map((country, i) => (
                 <div
                   key={country.name}
                   className={`fade-up d-${Math.min(i + 1, 6) * 100 as 100|200|300|400|500|600} glass-subtle`}
-                  style={{ borderRadius: 'var(--radius-lg)', padding: '1.1rem 1.25rem', border: '1px solid var(--border)' }}
+                  style={{ breakInside: 'avoid', marginBottom: '0.875rem', borderRadius: 'var(--radius-lg)', padding: '1.1rem 1.25rem', border: '1px solid var(--border)' }}
                 >
                   <h3 style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <span aria-hidden="true">{flagEmoji(country.code)}</span>
@@ -403,12 +403,12 @@ export default function DashboardPage() {
                     <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text)' }}>{continent}</span>
                     <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{list.length} {list.length === 1 ? 'country' : 'countries'}</span>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.875rem' }}>
+                  <div style={{ columns: '4 240px', columnGap: '0.875rem' }}>
                     {list.map((country, i) => (
                       <div
                         key={country.name}
                         className="glass-subtle"
-                        style={{ borderRadius: 'var(--radius-lg)', padding: '1.1rem 1.25rem', border: '1px solid var(--border)' }}
+                        style={{ breakInside: 'avoid', marginBottom: '0.875rem', borderRadius: 'var(--radius-lg)', padding: '1.1rem 1.25rem', border: '1px solid var(--border)' }}
                       >
                         <h3 style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <span aria-hidden="true">{flagEmoji(country.code)}</span>
