@@ -12,8 +12,8 @@ help:
 	@echo ""
 
 backend-install:
-	~/.pyenv/versions/3.12.3/bin/python3.12 -m venv venv
-	venv/bin/pip install -r requirements.txt
+	~/.pyenv/versions/3.12.3/bin/python3.12 -m venv venv --clear
+	venv/bin/python3 -m pip install -r requirements.txt
 
 backend-start:
 	venv/bin/uvicorn api.main:app --reload --port 8042
