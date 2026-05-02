@@ -127,7 +127,7 @@ export default function WorldMap({
         }}>
           <div>
             <h2 style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
-              Places Visited
+              World Map
             </h2>
             {countries.length > 0 && (
               <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '0.2rem 0 0', opacity: 0.5 }}>
