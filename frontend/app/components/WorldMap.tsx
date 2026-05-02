@@ -60,13 +60,13 @@ export default function WorldMap({
 
   const renderGeos = useCallback(
     ({ geographies }: { geographies: any[] }) =>
-      geographies.map(geo => {
+      geographies.map((geo, i) => {
         const a2 = N2A[String(geo.id).padStart(3, '0')]
         const country = a2 ? visitedMap.get(a2) : undefined
         const visited = !!country
         return (
           <Geography
-            key={geo.rsmKey}
+            key={geo.rsmKey ?? (geo.id != null ? String(geo.id) : i)}
             geography={geo}
             onClick={() => visited && setSelected(country!)}
             style={{
