@@ -276,7 +276,7 @@ export default function WorldMap({
               Close
             </button>
           </div>
-          <div style={{ flex: 1, overflow: 'hidden', background: 'rgba(8,15,26,0.8)' }}>
+          <div style={{ flex: 1, overflow: 'hidden', background: '#080f1a' }}>
             <MapCanvas zoomable={true} />
           </div>
           <div style={{ padding: '0.6rem 1.5rem', borderTop: '1px solid var(--border)', fontSize: '0.68rem', color: 'var(--text-muted)', opacity: 0.4, textAlign: 'center' }}>
