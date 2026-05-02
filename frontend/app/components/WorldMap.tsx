@@ -163,12 +163,15 @@ export default function WorldMap({
           <Geography
             key={geo.rsmKey}
             geography={geo}
-            onClick={() => visited && setSelected(country!)}
+            tabIndex={-1}
+            onClick={visited ? () => setSelected(country!) : undefined}
             style={{
               default: {
                 fill: visited ? 'rgba(0,212,170,0.22)' : 'rgba(255,255,255,0.05)',
                 stroke: 'rgba(255,255,255,0.1)', strokeWidth: 0.4,
-                outline: 'none', cursor: visited ? 'pointer' : 'default', transition: 'fill 120ms',
+                outline: 'none', cursor: visited ? 'pointer' : 'default',
+                pointerEvents: visited ? 'all' : 'none',
+                transition: 'fill 120ms',
               },
               hover: {
                 fill: visited ? 'rgba(0,212,170,0.45)' : 'rgba(255,255,255,0.09)',
