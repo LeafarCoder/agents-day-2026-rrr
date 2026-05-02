@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { API_URL } from '@/lib/api'
@@ -39,6 +39,46 @@ function flagEmoji(code: string) {
   return [...code.toUpperCase()].map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('')
 }
 
+type VisitGroupMode = 'country' | 'year' | 'continent' | 'season'
+type VisitItem = { countryCode: string; countryName: string; cityName: string; visit: string }
+
+const CONTINENT_MAP: Record<string, string> = {
+  GB:'Europe',FR:'Europe',DE:'Europe',IT:'Europe',ES:'Europe',PT:'Europe',NL:'Europe',
+  BE:'Europe',CH:'Europe',AT:'Europe',SE:'Europe',NO:'Europe',DK:'Europe',FI:'Europe',
+  PL:'Europe',CZ:'Europe',HU:'Europe',RO:'Europe',GR:'Europe',HR:'Europe',SI:'Europe',
+  SK:'Europe',BG:'Europe',RS:'Europe',ME:'Europe',BA:'Europe',MK:'Europe',AL:'Europe',
+  UA:'Europe',BY:'Europe',LT:'Europe',LV:'Europe',EE:'Europe',IS:'Europe',IE:'Europe',
+  LU:'Europe',MT:'Europe',CY:'Europe',TR:'Europe',MD:'Europe',GE:'Europe',AM:'Europe',AZ:'Europe',
+  JP:'Asia',CN:'Asia',KR:'Asia',TH:'Asia',VN:'Asia',ID:'Asia',MY:'Asia',SG:'Asia',
+  PH:'Asia',IN:'Asia',NP:'Asia',LK:'Asia',MV:'Asia',MM:'Asia',KH:'Asia',LA:'Asia',
+  BN:'Asia',TW:'Asia',HK:'Asia',MO:'Asia',BD:'Asia',PK:'Asia',AF:'Asia',IR:'Asia',
+  IQ:'Asia',SA:'Asia',AE:'Asia',QA:'Asia',KW:'Asia',BH:'Asia',OM:'Asia',YE:'Asia',
+  JO:'Asia',LB:'Asia',SY:'Asia',IL:'Asia',KZ:'Asia',UZ:'Asia',TM:'Asia',KG:'Asia',TJ:'Asia',MN:'Asia',
+  US:'Americas',CA:'Americas',MX:'Americas',BR:'Americas',AR:'Americas',CO:'Americas',
+  CL:'Americas',PE:'Americas',VE:'Americas',EC:'Americas',BO:'Americas',PY:'Americas',
+  UY:'Americas',GY:'Americas',SR:'Americas',PA:'Americas',CR:'Americas',NI:'Americas',
+  HN:'Americas',GT:'Americas',SV:'Americas',BZ:'Americas',CU:'Americas',JM:'Americas',
+  HT:'Americas',DO:'Americas',PR:'Americas',TT:'Americas',BB:'Americas',
+  ZA:'Africa',EG:'Africa',MA:'Africa',TN:'Africa',DZ:'Africa',LY:'Africa',NG:'Africa',
+  GH:'Africa',KE:'Africa',TZ:'Africa',UG:'Africa',RW:'Africa',ET:'Africa',SN:'Africa',
+  CI:'Africa',CM:'Africa',MZ:'Africa',ZW:'Africa',ZM:'Africa',AO:'Africa',MG:'Africa',
+  MU:'Africa',SC:'Africa',NA:'Africa',BW:'Africa',
+  AU:'Oceania',NZ:'Oceania',FJ:'Oceania',PG:'Oceania',SB:'Oceania',VU:'Oceania',
+  WS:'Oceania',TO:'Oceania',PF:'Oceania',
+}
+const CONTINENT_ORDER_LIST = ['Europe', 'Asia', 'Americas', 'Africa', 'Oceania', 'Other']
+const MONTH_NUM: Record<string, number> = {
+  Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12,
+}
+const SEASON_RANGE: Record<string, string> = {
+  Spring:'Mar – May', Summer:'Jun – Aug', Autumn:'Sep – Nov', Winter:'Dec – Feb',
+}
+
+function vYear(v: string) { const m = v.match(/\d{4}/); return m ? m[0] : '—' }
+function vMonth(v: string) { const m = v.match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/); return m ? MONTH_NUM[m[1]] ?? null : null }
+function vSeason(mo: number) { return mo>=3&&mo<=5?'Spring':mo>=6&&mo<=8?'Summer':mo>=9&&mo<=11?'Autumn':'Winter' }
+function vStripYear(v: string) { return v.replace(/\s*\d{4}/, '').replace(/\s*·\s*$/, '').trim() }
+
 export default function DashboardPage() {
   const [me, setMe] = useState<MeResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -54,6 +94,7 @@ export default function DashboardPage() {
   const [deleting, setDeleting] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [emailsExpanded, setEmailsExpanded] = useState(false)
+  const [visitGroup, setVisitGroup] = useState<VisitGroupMode>('country')
   const [excludeFilters, setExcludeFilters] = useState({
     promotions: true,
     spam:       true,
@@ -240,6 +281,39 @@ export default function DashboardPage() {
       )
     : []
   const countries = profile?.countries_visited ?? []
+
+  const visitsByYear = useMemo(() => {
+    const map: Record<string, VisitItem[]> = {}
+    for (const c of countries)
+      for (const city of c.cities)
+        for (const v of city.visits) {
+          const yr = vYear(v)
+          ;(map[yr] ??= []).push({ countryCode: c.code, countryName: c.name, cityName: city.name, visit: v })
+        }
+    return Object.entries(map).sort(([a], [b]) => b.localeCompare(a))
+  }, [countries])
+
+  const visitsByContinent = useMemo(() => {
+    const map: Record<string, CountryVisit[]> = {}
+    for (const c of countries) {
+      const cont = CONTINENT_MAP[c.code] ?? 'Other'
+      ;(map[cont] ??= []).push(c)
+    }
+    return CONTINENT_ORDER_LIST.filter(k => map[k]).map(k => ({ continent: k, list: map[k] }))
+  }, [countries])
+
+  const visitsBySeason = useMemo(() => {
+    const map: Record<string, VisitItem[]> = {}
+    for (const c of countries)
+      for (const city of c.cities)
+        for (const v of city.visits) {
+          const mo = vMonth(v)
+          if (!mo) continue
+          const s = vSeason(mo)
+          ;(map[s] ??= []).push({ countryCode: c.code, countryName: c.name, cityName: city.name, visit: v })
+        }
+    return ['Spring','Summer','Autumn','Winter'].filter(s => map[s]).map(s => ({ season: s, items: map[s] }))
+  }, [countries])
 
   return (
     <div style={{ minHeight: '100vh', padding: '88px 1.5rem 4rem', maxWidth: 680, margin: '0 auto' }}>
@@ -569,48 +643,173 @@ export default function DashboardPage() {
       {/* Places visited cards */}
       {countries.length > 0 && (
         <div className="fade-up d-400" style={{ marginTop: '1.5rem' }}>
-          <div style={{ marginBottom: '1rem' }}>
-            <h2 style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
-              Places Visited
-            </h2>
-            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '0.25rem 0 0', opacity: 0.6 }}>
-              Click a city to view trip details
-            </p>
+          {/* Header + group-by tabs */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <div>
+              <h2 style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
+                Places Visited
+              </h2>
+              <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '0.25rem 0 0', opacity: 0.6 }}>
+                Click a city to view trip details
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+              {(['country', 'year', 'continent', 'season'] as VisitGroupMode[]).map(mode => (
+                <button
+                  key={mode}
+                  onClick={() => setVisitGroup(mode)}
+                  style={{
+                    fontSize: '0.72rem', padding: '0.22rem 0.65rem',
+                    borderRadius: 'var(--radius-sm)', border: '1px solid', cursor: 'pointer',
+                    background: visitGroup === mode ? 'rgba(0,212,170,0.1)' : 'none',
+                    borderColor: visitGroup === mode ? 'rgba(0,212,170,0.45)' : 'rgba(255,255,255,0.08)',
+                    color: visitGroup === mode ? 'var(--text-accent)' : 'var(--text-muted)',
+                    transition: 'all 150ms',
+                    textTransform: 'capitalize',
+                  }}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.875rem' }}>
-            {countries.map((country, i) => (
-              <div
-                key={country.name}
-                className={`fade-up d-${Math.min(i + 1, 6) * 100 as 100|200|300|400|500|600} glass-subtle`}
-                style={{ borderRadius: 'var(--radius-lg)', padding: '1.1rem 1.25rem', border: '1px solid var(--border)' }}
-              >
-                <h3 style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span aria-hidden="true">{flagEmoji(country.code)}</span>
-                  {country.name}
-                </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                  {country.cities.map(city => (
-                    <div
-                      key={city.name}
-                      className="city-row"
-                      onClick={() => selectCity(country.code, city.name)}
-                      style={{
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem',
-                        padding: '0.4rem 0.6rem', margin: '0 -0.6rem',
-                      }}
-                    >
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text)' }}>{city.name}</span>
-                      {city.visits.length > 0 && (
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', flexShrink: 0 }}>
-                          {city.visits[0]}
-                        </span>
-                      )}
-                    </div>
-                  ))}
+
+          {/* Country view — card grid (default) */}
+          {visitGroup === 'country' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.875rem' }}>
+              {countries.map((country, i) => (
+                <div
+                  key={country.name}
+                  className={`fade-up d-${Math.min(i + 1, 6) * 100 as 100|200|300|400|500|600} glass-subtle`}
+                  style={{ borderRadius: 'var(--radius-lg)', padding: '1.1rem 1.25rem', border: '1px solid var(--border)' }}
+                >
+                  <h3 style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span aria-hidden="true">{flagEmoji(country.code)}</span>
+                    {country.name}
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                    {country.cities.map(city => (
+                      <div
+                        key={city.name}
+                        className="city-row"
+                        onClick={() => selectCity(country.code, city.name)}
+                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem', padding: '0.4rem 0.6rem', margin: '0 -0.6rem' }}
+                      >
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text)' }}>{city.name}</span>
+                        {city.visits.length > 0 && (
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', flexShrink: 0 }}>{city.visits[0]}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
+
+          {/* Year view */}
+          {visitGroup === 'year' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {visitsByYear.map(([year, items]) => (
+                <div key={year}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text)' }}>{year}</span>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{items.length} {items.length === 1 ? 'visit' : 'visits'}</span>
+                  </div>
+                  <div className="glass-subtle" style={{ borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', padding: '0.25rem 0.75rem' }}>
+                    {items.map((item, i) => (
+                      <div
+                        key={i}
+                        onClick={() => selectCity(item.countryCode, item.cityName)}
+                        className="city-row"
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0', borderBottom: i < items.length - 1 ? '1px solid var(--border)' : 'none' }}
+                      >
+                        <span style={{ fontSize: '0.88rem', lineHeight: 1, flexShrink: 0 }}>{flagEmoji(item.countryCode)}</span>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text)', flex: 1 }}>
+                          {item.countryName} <span style={{ color: 'var(--text-muted)' }}>·</span> {item.cityName}
+                        </span>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', flexShrink: 0 }}>{vStripYear(item.visit)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Continent view */}
+          {visitGroup === 'continent' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {visitsByContinent.map(({ continent, list }) => (
+                <div key={continent}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.6rem' }}>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text)' }}>{continent}</span>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{list.length} {list.length === 1 ? 'country' : 'countries'}</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.875rem' }}>
+                    {list.map((country, i) => (
+                      <div
+                        key={country.name}
+                        className="glass-subtle"
+                        style={{ borderRadius: 'var(--radius-lg)', padding: '1.1rem 1.25rem', border: '1px solid var(--border)' }}
+                      >
+                        <h3 style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span aria-hidden="true">{flagEmoji(country.code)}</span>
+                          {country.name}
+                        </h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                          {country.cities.map(city => (
+                            <div
+                              key={city.name}
+                              className="city-row"
+                              onClick={() => selectCity(country.code, city.name)}
+                              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem', padding: '0.4rem 0.6rem', margin: '0 -0.6rem' }}
+                            >
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text)' }}>{city.name}</span>
+                              {city.visits.length > 0 && (
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', flexShrink: 0 }}>{city.visits[0]}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Season view */}
+          {visitGroup === 'season' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {visitsBySeason.map(({ season, items }) => (
+                <div key={season}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text)' }}>{season}</span>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{SEASON_RANGE[season]}</span>
+                    <span style={{ marginLeft: 'auto', fontSize: '0.68rem', color: 'var(--text-muted)' }}>{items.length}</span>
+                  </div>
+                  <div className="glass-subtle" style={{ borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', padding: '0.25rem 0.75rem' }}>
+                    {items.map((item, i) => (
+                      <div
+                        key={i}
+                        onClick={() => selectCity(item.countryCode, item.cityName)}
+                        className="city-row"
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0', borderBottom: i < items.length - 1 ? '1px solid var(--border)' : 'none' }}
+                      >
+                        <span style={{ fontSize: '0.88rem', lineHeight: 1, flexShrink: 0 }}>{flagEmoji(item.countryCode)}</span>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text)', flex: 1 }}>
+                          {item.countryName} <span style={{ color: 'var(--text-muted)' }}>·</span> {item.cityName}
+                        </span>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', flexShrink: 0 }}>{item.visit}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
