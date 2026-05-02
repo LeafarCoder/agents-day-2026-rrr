@@ -59,9 +59,10 @@ export default function Navbar() {
         {/* Nav links + theme toggle */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
           {[
-            { href: "/",            label: "Profile"     },
-            { href: "/scan",        label: "Results"     },
-            { href: "/preferences", label: "Categories"  },
+            { href: "/",             label: "Profile"     },
+            { href: "/email-scan",   label: "Scan"        },
+            { href: "/scan",         label: "Results"     },
+            { href: "/preferences",  label: "Categories"  },
           ].map(({ href, label }) => (
             <Link
               key={href}
