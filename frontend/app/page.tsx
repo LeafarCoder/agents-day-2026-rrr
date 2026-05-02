@@ -150,6 +150,41 @@ export default function DashboardPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  const _countries = me?.profile?.countries_visited ?? []
+
+  const visitsByYear = useMemo(() => {
+    const map: Record<string, VisitItem[]> = {}
+    for (const c of _countries)
+      for (const city of c.cities)
+        for (const v of city.visits) {
+          const yr = vYear(v)
+          ;(map[yr] ??= []).push({ countryCode: c.code, countryName: c.name, cityName: city.name, visit: v })
+        }
+    return Object.entries(map).sort(([a], [b]) => b.localeCompare(a))
+  }, [_countries])
+
+  const visitsByContinent = useMemo(() => {
+    const map: Record<string, CountryVisit[]> = {}
+    for (const c of _countries) {
+      const cont = CONTINENT_MAP[c.code] ?? 'Other'
+      ;(map[cont] ??= []).push(c)
+    }
+    return CONTINENT_ORDER_LIST.filter(k => map[k]).map(k => ({ continent: k, list: map[k] }))
+  }, [_countries])
+
+  const visitsBySeason = useMemo(() => {
+    const map: Record<string, VisitItem[]> = {}
+    for (const c of _countries)
+      for (const city of c.cities)
+        for (const v of city.visits) {
+          const mo = vMonth(v)
+          if (!mo) continue
+          const s = vSeason(mo)
+          ;(map[s] ??= []).push({ countryCode: c.code, countryName: c.name, cityName: city.name, visit: v })
+        }
+    return ['Spring','Summer','Autumn','Winter'].filter(s => map[s]).map(s => ({ season: s, items: map[s] }))
+  }, [_countries])
+
   function setDatePreset(months: number) {
     const today = new Date()
     const from  = new Date(today)
@@ -281,39 +316,6 @@ export default function DashboardPage() {
       )
     : []
   const countries = profile?.countries_visited ?? []
-
-  const visitsByYear = useMemo(() => {
-    const map: Record<string, VisitItem[]> = {}
-    for (const c of countries)
-      for (const city of c.cities)
-        for (const v of city.visits) {
-          const yr = vYear(v)
-          ;(map[yr] ??= []).push({ countryCode: c.code, countryName: c.name, cityName: city.name, visit: v })
-        }
-    return Object.entries(map).sort(([a], [b]) => b.localeCompare(a))
-  }, [countries])
-
-  const visitsByContinent = useMemo(() => {
-    const map: Record<string, CountryVisit[]> = {}
-    for (const c of countries) {
-      const cont = CONTINENT_MAP[c.code] ?? 'Other'
-      ;(map[cont] ??= []).push(c)
-    }
-    return CONTINENT_ORDER_LIST.filter(k => map[k]).map(k => ({ continent: k, list: map[k] }))
-  }, [countries])
-
-  const visitsBySeason = useMemo(() => {
-    const map: Record<string, VisitItem[]> = {}
-    for (const c of countries)
-      for (const city of c.cities)
-        for (const v of city.visits) {
-          const mo = vMonth(v)
-          if (!mo) continue
-          const s = vSeason(mo)
-          ;(map[s] ??= []).push({ countryCode: c.code, countryName: c.name, cityName: city.name, visit: v })
-        }
-    return ['Spring','Summer','Autumn','Winter'].filter(s => map[s]).map(s => ({ season: s, items: map[s] }))
-  }, [countries])
 
   return (
     <div style={{ minHeight: '100vh', padding: '88px 1.5rem 4rem', maxWidth: 680, margin: '0 auto' }}>
