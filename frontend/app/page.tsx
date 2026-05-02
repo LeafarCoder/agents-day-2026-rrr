@@ -50,6 +50,7 @@ export default function DashboardPage() {
   const [expLoading, setExpLoading] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [emailsExpanded, setEmailsExpanded] = useState(false)
   const [excludeFilters, setExcludeFilters] = useState({
     promotions: true,
     spam:       true,
@@ -117,6 +118,7 @@ export default function DashboardPage() {
     setSteps([])
     setCurrentStep('')
     setScanError('')
+    setEmailsExpanded(false)
 
     const excludeParams = (Object.keys(excludeFilters) as (keyof typeof excludeFilters)[])
       .filter(k => excludeFilters[k])
@@ -337,27 +339,126 @@ export default function DashboardPage() {
         )}
 
         {/* Progress steps */}
-        {scanning && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            {STEP_ORDER.map((step, i) => {
-              const done = steps.some(s => s.step === step)
-              const active = currentStep === step
-              const msg = steps.findLast(s => s.step === step)?.msg
-              return (
-                <div key={step} className={done ? 'fade-in' : ''} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', opacity: done || active ? 1 : 0.3, transition: 'opacity 300ms' }}>
-                  <span style={{
-                    width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                    background: done ? 'var(--text-accent)' : active ? 'var(--text-accent)' : 'var(--text-muted)',
-                    boxShadow: active ? 'var(--glow-teal)' : 'none',
-                  }} />
-                  <span style={{ fontSize: '0.82rem', color: done ? 'var(--text)' : 'var(--text-muted)' }}>
-                    {msg ?? step}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        )}
+        {scanning && (() => {
+          const parsingEmails = steps.filter(s => s.step === 'parsing')
+          const latestParsing = parsingEmails[parsingEmails.length - 1]
+          const parsingActive = currentStep === 'parsing'
+          const parsingStarted = parsingEmails.length > 0
+          const currentN = latestParsing?.current ?? 0
+          const totalN = latestParsing?.total ?? 0
+
+          const getSubject = (msg: string) => {
+            const m = msg.match(/^Scanning \d+\/\d+: (.+)$/)
+            return m ? m[1] : msg
+          }
+
+          const collapsedLabel = parsingActive && latestParsing
+            ? `Email ${currentN} of ${totalN} — ${getSubject(latestParsing.msg)}`
+            : parsingStarted
+              ? `Processed ${totalN} emails`
+              : 'Processing emails'
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              {STEP_ORDER.map(step => {
+                if (step === 'parsing') {
+                  return (
+                    <div key="parsing" style={{ opacity: parsingStarted || parsingActive ? 1 : 0.3, transition: 'opacity 300ms' }}>
+                      <button
+                        onClick={() => parsingStarted && setEmailsExpanded(v => !v)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '0.75rem',
+                          background: 'none', border: 'none',
+                          cursor: parsingStarted ? 'pointer' : 'default',
+                          padding: 0, width: '100%', textAlign: 'left',
+                        }}
+                      >
+                        <span style={{
+                          width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                          background: parsingStarted ? 'var(--text-accent)' : 'var(--text-muted)',
+                          boxShadow: parsingActive ? 'var(--glow-teal)' : 'none',
+                          animation: parsingActive ? 'glowPulse 1.5s ease infinite' : 'none',
+                        }} />
+                        <span style={{
+                          fontSize: '0.82rem',
+                          color: parsingStarted ? 'var(--text)' : 'var(--text-muted)',
+                          flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                          {collapsedLabel}
+                        </span>
+                        {parsingStarted && (
+                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
+                            style={{ transform: emailsExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 200ms', flexShrink: 0, opacity: 0.5 }}
+                          >
+                            <path d="M3 2l4 3-4 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </button>
+
+                      {emailsExpanded && parsingEmails.length > 0 && (
+                        <div style={{
+                          marginTop: '0.5rem', marginLeft: '1.5rem',
+                          maxHeight: 180, overflowY: 'auto',
+                          background: 'rgba(255,255,255,0.03)',
+                          borderRadius: 'var(--radius-md)',
+                          border: '1px solid rgba(255,255,255,0.06)',
+                          padding: '0.35rem 0',
+                        }}>
+                          {parsingEmails.map((email, i) => {
+                            const isActive = i === parsingEmails.length - 1 && parsingActive
+                            const subject = getSubject(email.msg)
+                            const isSkipped = subject === 'skipped' || subject === 'error'
+                            return (
+                              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.22rem 0.75rem' }}>
+                                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', width: 28, textAlign: 'right', flexShrink: 0 }}>
+                                  {email.current ?? i + 1}
+                                </span>
+                                {isActive ? (
+                                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--text-accent)', animation: 'glowPulse 1.5s ease infinite', flexShrink: 0, display: 'inline-block' }} />
+                                ) : isSkipped ? (
+                                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0, opacity: 0.3 }}>
+                                    <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                                  </svg>
+                                ) : (
+                                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0 }}>
+                                    <path d="M2 6.5l2.5 2.5 5.5-5.5" stroke="var(--text-accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                )}
+                                <span style={{
+                                  fontSize: '0.75rem', color: 'var(--text)',
+                                  flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                  opacity: isSkipped ? 0.35 : 1,
+                                }}>
+                                  {subject}
+                                </span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                }
+
+                const done = steps.some(s => s.step === step)
+                const active = currentStep === step
+                const msg = steps.findLast(s => s.step === step)?.msg
+                return (
+                  <div key={step} className={done ? 'fade-in' : ''} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', opacity: done || active ? 1 : 0.3, transition: 'opacity 300ms' }}>
+                    <span style={{
+                      width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                      background: done ? 'var(--text-accent)' : active ? 'var(--text-accent)' : 'var(--text-muted)',
+                      boxShadow: active ? 'var(--glow-teal)' : 'none',
+                    }} />
+                    <span style={{ fontSize: '0.82rem', color: done ? 'var(--text)' : 'var(--text-muted)' }}>
+                      {msg ?? step}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })()}
 
         {scanError && (
           <p style={{ marginTop: '1rem', fontSize: '0.82rem', color: '#f87171', background: 'rgba(248,113,113,0.08)', padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-md)' }}>
