@@ -56,7 +56,6 @@ def delete_me(request: Request):
         request.session.pop("credentials", None)
         return {"error": "failed_to_resolve_user"}
     writer.delete_user(user_email)
-    request.session.clear()
     return {"deleted": True, "email": user_email}
 
 
