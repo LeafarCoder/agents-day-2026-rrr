@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 from datetime import date
 
 from fastapi import APIRouter, Query, Request
@@ -18,6 +19,24 @@ from config import LLM_CONCURRENCY
 
 log    = get("scan")
 router = APIRouter()
+
+_tls = threading.local()
+
+
+def _thread_service(creds):
+    # httplib2 is not thread-safe; build one service per thread to avoid shared SSL state
+    if not hasattr(_tls, "gmail"):
+        from googleapiclient.discovery import build
+        _tls.gmail = build("gmail", "v1", credentials=creds)
+    return _tls.gmail
+
+
+def _fetch_metadata(creds, msg_id):
+    return fetcher.get_metadata(_thread_service(creds), msg_id)
+
+
+def _fetch_full(creds, msg_id):
+    return fetcher.get_full(_thread_service(creds), msg_id)
 
 
 @router.get("/api/scan")
@@ -70,7 +89,7 @@ async def scan_stream(
             async def process_one(msg_ref: dict) -> tuple[dict | None, str, str]:
                 """Return (booking_or_None, subject, status) where status ∈ {skip, cached, extracted}."""
                 async with semaphore:
-                    meta    = await asyncio.to_thread(fetcher.get_metadata, service, msg_ref["id"])
+                    meta    = await asyncio.to_thread(_fetch_metadata, creds, msg_ref["id"])
                     headers = {h["name"]: h["value"] for h in meta.get("payload", {}).get("headers", [])}
 
                     domain   = parser.extract_sender_domain(headers.get("From", ""))
@@ -85,7 +104,7 @@ async def scan_stream(
                     if not domain and not parser.is_confirmation(subject):
                         return None, subject, "skip"
 
-                    full      = await asyncio.to_thread(fetcher.get_full, service, msg_ref["id"])
+                    full      = await asyncio.to_thread(_fetch_full, creds, msg_ref["id"])
                     body_text = parser.decode_body(full.get("payload", {}))
 
                     extraction: dict = {}
