@@ -86,7 +86,7 @@ export default function OpenRouterKeyModal({ onSaved, onDismiss }: Props) {
             </div>
           </div>
           <div style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '0.5rem' }}>
-            A 1-year inbox scan typically costs under <strong style={{ color: 'var(--text)' }}>$2</strong>.
+            Approximately <strong style={{ color: 'var(--text)' }}>$1</strong> per 1,000 emails scanned.
           </div>
         </div>
 
