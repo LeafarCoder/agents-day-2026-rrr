@@ -209,7 +209,7 @@ export default function WorldMap({
         <div
           onClick={() => setSelected(null)}
           style={{
-            position: 'fixed', inset: 0, zIndex: 60,
+            position: 'fixed', inset: 0, zIndex: 80,
             background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: '1.5rem',
