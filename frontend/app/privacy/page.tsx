@@ -5,6 +5,7 @@ export const metadata: Metadata = {
 }
 
 const LAST_UPDATED = 'May 3, 2026'
+const PRIVACY_EMAIL = 'email.travel.parser@gmail.com'
 const EDPB_URL = 'https://edpb.europa.eu/about-edpb/about-edpb/members_en'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -107,12 +108,12 @@ export default function PrivacyPage() {
           <P>
             The <strong>data controller</strong> — the entity that determines the purposes and
             means of processing your personal data — is the operator of Travel DNA. For
-            inquiries or to exercise your rights, use the contact details in Section 15.
+            inquiries or to exercise your rights, contact us at{' '}
+            <a href={`mailto:${PRIVACY_EMAIL}`} style={{ color: 'var(--text-accent)', textDecoration: 'none' }}>{PRIVACY_EMAIL}</a>.
           </P>
           <P>
             If you are located in the European Economic Area (EEA) and we have not designated
-            a local EU representative, you may direct requests to us using the contact details
-            in Section 15. We
+            a local EU representative, you may direct requests to us at the email above. We
             will respond to all data subject requests within 30 days as required by GDPR
             Article 12(3).
           </P>
@@ -345,11 +346,14 @@ export default function PrivacyPage() {
               immediately at{' '}
               <A href="https://myaccount.google.com/permissions">
                 myaccount.google.com/permissions
-              </A>. To delete stored data, contact us (see Section 15).
+              </A>. To delete stored data, email us at{' '}
+              <a href={`mailto:${PRIVACY_EMAIL}`} style={{ color: 'var(--text-accent)', textDecoration: 'none' }}>{PRIVACY_EMAIL}</a>.
             </li>
           </ul>
           <P>
-            To exercise any of these rights, contact us using the details in Section 15. We
+            To exercise any of these rights, email{' '}
+            <a href={`mailto:${PRIVACY_EMAIL}`} style={{ color: 'var(--text-accent)', textDecoration: 'none' }}>{PRIVACY_EMAIL}</a>.
+            {' '}We
             will respond within <strong>30 days</strong>. We may ask you to verify your
             identity before processing the request.
           </P>
@@ -375,7 +379,9 @@ export default function PrivacyPage() {
             <li><strong>Right to Non-Discrimination</strong> — We will not discriminate against you for exercising your CCPA rights.</li>
           </ul>
           <P>
-            To submit a CCPA request, contact us using the details in Section 15. We will
+            To submit a CCPA request, email{' '}
+            <a href={`mailto:${PRIVACY_EMAIL}`} style={{ color: 'var(--text-accent)', textDecoration: 'none' }}>{PRIVACY_EMAIL}</a>.
+            {' '}We will
             respond within <strong>45 days</strong> (extendable to 90 days with notice). You
             may designate an authorized agent to make requests on your behalf.
           </P>
@@ -427,7 +433,7 @@ export default function PrivacyPage() {
             under <strong>16</strong> in EEA member states where the higher age applies under
             GDPR Article 8). We do not knowingly collect personal data from children below
             these ages. If you believe a child has provided us with personal data, contact us
-            (see Section 15) and we will delete it promptly.
+            at <a href={`mailto:${PRIVACY_EMAIL}`} style={{ color: 'var(--text-accent)', textDecoration: 'none' }}>{PRIVACY_EMAIL}</a> and we will delete it promptly.
           </P>
         </Section>
 
@@ -468,12 +474,13 @@ export default function PrivacyPage() {
         {/* 15 — Contact */}
         <Section title="15. Contact Us">
           <P>
-            For any privacy questions, data subject requests, or to report a concern, contact
-            our privacy team. Contact details will be published here shortly.
+            For any privacy questions, data subject requests, or to report a concern, email
+            our privacy team at{' '}
+            <a href={`mailto:${PRIVACY_EMAIL}`} style={{ color: 'var(--text-accent)', textDecoration: 'none' }}>{PRIVACY_EMAIL}</a>.
           </P>
           <P>
-            Once available, we will acknowledge your request within 5 business days and
-            resolve it within 30 days (GDPR) or 45 days (CCPA).
+            We will acknowledge your request within 5 business days and resolve it within 30
+            days (GDPR) or 45 days (CCPA).
           </P>
         </Section>
 
