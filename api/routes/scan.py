@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from googleapiclient.errors import HttpError
 
 from detection import profile as profile_builder
-from gmail.auth import credentials_from_session
+from gmail.auth import credentials_from_session, get_current_user_email
 from gmail import fetcher, parser
 from llm import extractor as llm_extractor
 from observability.logger import get
@@ -46,12 +46,9 @@ def scan_results(
     from_date: str | None = None,
     to_date: str | None = None,
 ):
-    from googleapiclient.discovery import build
-    creds = credentials_from_session(request.session)
-    if not creds:
+    user_email = get_current_user_email(request.session)
+    if not user_email:
         return JSONResponse({"error": "not_authenticated"}, status_code=401)
-    service    = build("gmail", "v1", credentials=creds)
-    user_email = service.users().getProfile(userId="me").execute()["emailAddress"]
     data = reader.get_scan_results(user_email, from_date=from_date, to_date=to_date)
     return data or {}
 
@@ -71,6 +68,10 @@ async def scan_stream(
         from googleapiclient.discovery import build
 
         try:
+            if request.session.get("demo"):
+                yield _event("error", "Scanning is disabled in demo mode.")
+                return
+
             yield _event("auth", "Connecting to Gmail...")
 
             creds = credentials_from_session(request.session)
@@ -78,10 +79,20 @@ async def scan_stream(
                 yield _event("error", "Not authenticated — please reconnect.")
                 return
 
+            service = await asyncio.to_thread(build, "gmail", "v1", credentials=creds)
+            user_email = (await asyncio.to_thread(
+                lambda: service.users().getProfile(userId="me").execute()
+            ))["emailAddress"]
+
+            openrouter_key = await asyncio.to_thread(reader.get_openrouter_key, user_email)
+            if not openrouter_key:
+                yield _event("error", "openrouter_key_missing")
+                return
+
+            user_signals = await asyncio.to_thread(reader.get_user_signals, user_email)
+
             since = date.fromisoformat(from_date)
             until = date.fromisoformat(to_date)
-
-            service = await asyncio.to_thread(build, "gmail", "v1", credentials=creds)
 
             yield _event("fetching", f"Searching emails from {since} to {until}...")
 
@@ -132,7 +143,7 @@ async def scan_stream(
                             status = "cached"
                         else:
                             extraction = await asyncio.to_thread(
-                                llm_extractor.extract_booking, subject, body_text
+                                llm_extractor.extract_booking, subject, body_text, openrouter_key, user_signals
                             )
                     except Exception as exc:
                         log.exception(f"LLM extraction failed  msg={msg_ref['id']}  err={exc}")

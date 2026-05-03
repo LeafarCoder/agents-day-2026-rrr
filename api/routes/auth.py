@@ -8,8 +8,9 @@ from fastapi.responses import RedirectResponse
 from googleapiclient.discovery import build
 
 from config import CREDENTIALS_FILE, FRONTEND_URL, GOOGLE_CREDENTIALS_ERROR, GOOGLE_REDIRECT_URI
-from gmail.auth import credentials_from_session, make_flow, save_credentials_to_session
+from gmail.auth import credentials_from_session, make_flow, save_credentials_to_session, DEMO_USER_EMAIL
 from db import reader, writer
+import db.reader as db_reader
 
 
 def _redirect_uri(request: Request) -> str:
@@ -20,9 +21,28 @@ router = APIRouter()
 
 @router.get("/api/me")
 def me(request: Request):
+    today = date.today()
+    is_demo = bool(request.session.get("demo"))
+
+    if is_demo:
+        profile_data = reader.get_profile(DEMO_USER_EMAIL)
+        user_row = (profile_data or {}).get("user") or {}
+        return {
+            "connected":          True,
+            "demo":               True,
+            "has_openrouter_key": False,
+            "user_email":         DEMO_USER_EMAIL,
+            "display_name":       user_row.get("display_name"),
+            "home_city":          user_row.get("home_city"),
+            "home_country":       user_row.get("home_country"),
+            "home_country_code":  user_row.get("home_country_code"),
+            "profile":            profile_data,
+            "default_from":       (today - timedelta(days=365)).isoformat(),
+            "default_to":         today.isoformat(),
+        }
+
     creds = credentials_from_session(request.session)
     connected = creds is not None
-    today = date.today()
     profile_data = None
     user_email = None
 
@@ -35,12 +55,19 @@ def me(request: Request):
             request.session.pop("credentials", None)
             connected = False
 
+    user_row = (profile_data or {}).get("user") or {}
     return {
-        "connected": connected,
-        "user_email": user_email,
-        "profile": profile_data,
-        "default_from": (today - timedelta(days=365)).isoformat(),
-        "default_to": today.isoformat(),
+        "connected":          connected,
+        "demo":               False,
+        "has_openrouter_key": db_reader.has_openrouter_key(user_email) if user_email else False,
+        "user_email":         user_email,
+        "display_name":       user_row.get("display_name"),
+        "home_city":          user_row.get("home_city"),
+        "home_country":       user_row.get("home_country"),
+        "home_country_code":  user_row.get("home_country_code"),
+        "profile":            profile_data,
+        "default_from":       (today - timedelta(days=365)).isoformat(),
+        "default_to":         today.isoformat(),
     }
 
 
@@ -87,6 +114,7 @@ def oauth_callback(request: Request):
     if auth_response.startswith("http://"):
         auth_response = "https://" + auth_response[7:]
     flow.fetch_token(authorization_response=auth_response)
+    request.session.clear()  # Removes demo flag and stale OAuth state
     save_credentials_to_session(flow.credentials, request.session)
     return RedirectResponse(FRONTEND_URL)
 

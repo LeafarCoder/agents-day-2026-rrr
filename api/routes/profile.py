@@ -7,7 +7,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from config import FRONTEND_URL
-from gmail.auth import credentials_from_session
+from gmail.auth import credentials_from_session, get_current_user_email
 from observability.logger import get
 
 log = get("api.profile")
@@ -27,6 +27,9 @@ async def build_taste_profile(request: Request):
       msgvault hybrid search → MiniMax extraction → Ollama embedding → Supabase
     Requires msgvault to be installed and synced on the server.
     """
+    if request.session.get("demo"):
+        return JSONResponse({"error": "demo_mode_read_only"}, status_code=403)
+
     creds = credentials_from_session(request.session)
     if not creds:
         return JSONResponse({"error": "not_authenticated"}, status_code=401)
@@ -38,11 +41,7 @@ async def build_taste_profile(request: Request):
             status_code=503,
         )
 
-    from googleapiclient.discovery import build as gapi_build
-    service = await asyncio.to_thread(gapi_build, "gmail", "v1", credentials=creds)
-    user_email = (
-        await asyncio.to_thread(lambda: service.users().getProfile(userId="me").execute())
-    )["emailAddress"]
+    user_email = await asyncio.to_thread(get_current_user_email, request.session)
 
     log.info(f"Profile build triggered  user={user_email}")
 

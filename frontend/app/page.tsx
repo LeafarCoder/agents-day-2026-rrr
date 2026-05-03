@@ -4,6 +4,44 @@ import { useState, useEffect, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { API_URL } from '@/lib/api'
+import OpenRouterKeyModal from '@/components/OpenRouterKeyModal'
+
+const HERO_VERBS = ['Uncover', 'Decode', 'Discover', 'Sequence']
+
+function RotatingVerb() {
+  const [idx, setIdx] = useState(0)
+  const [show, setShow] = useState(true)
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    let swap: ReturnType<typeof setTimeout>
+    const id = setInterval(() => {
+      setShow(false)
+      swap = setTimeout(() => {
+        setIdx(i => (i + 1) % HERO_VERBS.length)
+        setShow(true)
+      }, 320)
+    }, 3200)
+    return () => { clearInterval(id); clearTimeout(swap) }
+  }, [])
+
+  return (
+    <span style={{ display: 'inline-block', position: 'relative' }}>
+      {/* Width anchor — keeps layout stable across all verb lengths */}
+      <span aria-hidden="true" style={{ visibility: 'hidden', pointerEvents: 'none' }}>
+        Discover
+      </span>
+      <span style={{
+        position: 'absolute', left: 0, top: 0, whiteSpace: 'nowrap',
+        opacity: show ? 1 : 0,
+        transform: show ? 'translateY(0)' : 'translateY(-10px)',
+        transition: 'opacity 320ms ease, transform 320ms ease',
+      }}>
+        {HERO_VERBS[idx]}
+      </span>
+    </span>
+  )
+}
 
 const WorldMap = dynamic(() => import('./components/WorldMap'), { ssr: false })
 
@@ -26,7 +64,13 @@ type Profile = {
 }
 type MeResponse = {
   connected: boolean
+  demo: boolean
+  has_openrouter_key: boolean
   user_email: string | null
+  display_name: string | null
+  home_city: string | null
+  home_country: string | null
+  home_country_code: string | null
   profile: Profile | null
 }
 
@@ -77,23 +121,12 @@ function vStripYear(v: string) { return v.replace(/\s*\d{4}/, '').replace(/\s*·
 export default function DashboardPage() {
   const [me, setMe] = useState<MeResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showKeyModal, setShowKeyModal] = useState(false)
   const [selectedCity, setSelectedCity] = useState<{ countryCode: string; cityName: string } | null>(null)
   const [expCache, setExpCache] = useState<Record<string, TripData[]>>({})
   const [expLoading, setExpLoading] = useState(false)
-  const [deleting, setDeleting] = useState(false)
   const [visitGroup, setVisitGroup] = useState<VisitGroupMode>('country')
   const [openPrefs, setOpenPrefs] = useState<Set<string>>(new Set())
-
-  async function deleteAllData() {
-    if (!confirm('Delete all your data? This cannot be undone.')) return
-    setDeleting(true)
-    try {
-      await fetch(`${API_URL}/api/me`, { method: 'DELETE', credentials: 'include' })
-      window.location.href = '/'
-    } finally {
-      setDeleting(false)
-    }
-  }
 
   async function selectCity(countryCode: string, cityName: string) {
     const key = `${countryCode}:${cityName}`
@@ -123,7 +156,12 @@ export default function DashboardPage() {
   useEffect(() => {
     fetch(`${API_URL}/api/me`, { credentials: 'include' })
       .then(r => r.json())
-      .then((data: MeResponse) => setMe(data))
+      .then((data: MeResponse) => {
+        setMe(data)
+        if (data.connected && !data.demo && !data.has_openrouter_key) {
+          setShowKeyModal(true)
+        }
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -200,41 +238,61 @@ export default function DashboardPage() {
             marginBottom: '1.25rem',
             letterSpacing: '-0.02em',
           }}>
-            Uncover Your<br />
+            <RotatingVerb /> Your<br />
             <span style={{ color: 'var(--text-accent)' }}>Travel DNA</span>
           </h1>
 
           <p className="fade-up d-200" style={{ fontSize: '1.05rem', color: 'var(--text-muted)', marginBottom: '2.5rem', lineHeight: 1.7 }}>
-            Connect your Gmail inbox. We scan your booking history locally
-            and build a rich preference profile — email bodies never leave your device.
+            Sign in to scan your booking history and build a rich preference profile — email bodies never leave your device.
           </p>
 
-          <div className="fade-up d-300">
+          <div className="fade-up d-300" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <a href={`${API_URL}/auth`} className="btn btn-primary" style={{ fontSize: '0.95rem', padding: '0.75rem 1.75rem' }}>
-              Connect Gmail
+              Sign In
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                 <path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </a>
+            <a href={`${API_URL}/demo`} className="btn btn-ghost" style={{ fontSize: '0.95rem', padding: '0.75rem 1.75rem' }}>
+              Check Demo
+            </a>
           </div>
 
-          {/* Trust badge */}
-          <div className="fade-up d-400 glass-subtle" style={{
+          {/* Feature grid */}
+          <div className="fade-up d-400" style={{
             marginTop: '3rem',
-            borderRadius: 'var(--radius-lg)',
-            padding: '1rem 1.5rem',
-            display: 'flex',
-            alignItems: 'center',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
             gap: '0.75rem',
             textAlign: 'left',
           }}>
-            <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>🔒</span>
-            <div>
-              <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.2rem' }}>Privacy-first by design</div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                Email bodies are processed locally via msgvault. Only metadata and preference signals reach the cloud.
+            {[
+              { color: '#00d4aa', gradient: 'linear-gradient(135deg, #00d4aa 0%, #00a884 100%)', title: 'LLM-parsed bookings', desc: 'Extracts flights, hotels & restaurants from messy emails.' },
+              { color: '#4a9eff', gradient: 'linear-gradient(135deg, #4a9eff 0%, #1a6fd4 100%)', title: 'World map', desc: 'Countries, continents, microstates — all visualized.' },
+              { color: '#c8a97e', gradient: 'linear-gradient(135deg, #e8d5b0 0%, #c8a97e 100%)', title: 'Activity & taste signals', desc: 'Surfaces what you actually like doing on trips.' },
+              { color: '#a78bfa', gradient: 'linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%)', title: 'Year-over-year patterns', desc: 'See how your travel rhythm shifts season by season.' },
+              { color: '#f59e0b', gradient: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)', title: 'One-click rescan', desc: 'Re-process new emails without losing prior signals.' },
+              { color: '#34d399', gradient: 'linear-gradient(135deg, #34d399 0%, #059669 100%)', title: 'Privacy-first by design', desc: 'Email bodies stay local — only signals reach the cloud.' },
+            ].map(({ gradient, title, desc }) => (
+              <div key={title} className="glass-subtle" style={{
+                borderRadius: 'var(--radius-lg)',
+                padding: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.6rem',
+              }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 10,
+                  background: gradient,
+                  flexShrink: 0,
+                  opacity: 0.85,
+                }} />
+                <div>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.2rem' }}>{title}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>{desc}</div>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
@@ -242,6 +300,18 @@ export default function DashboardPage() {
   }
 
   /* ── Connected ─────────────────────────────────────────────────── */
+  if (showKeyModal) {
+    return (
+      <OpenRouterKeyModal
+        onSaved={() => {
+          setShowKeyModal(false)
+          setMe(prev => prev ? { ...prev, has_openrouter_key: true } : prev)
+        }}
+        onDismiss={() => setShowKeyModal(false)}
+      />
+    )
+  }
+
   const profile = me.profile
   const prefs = profile?.preferences
     ? Object.entries(profile.preferences as Record<string, Preference>).sort(
@@ -253,22 +323,16 @@ export default function DashboardPage() {
   return (
     <div style={{ minHeight: '100vh', padding: '88px 1.5rem 4rem', maxWidth: 680, margin: '0 auto' }}>
 
-      {/* Header row */}
-      <div className="fade-up" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
-        <div>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
-            Your Profile
-          </h1>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>{me.user_email}</p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button onClick={deleteAllData} disabled={deleting} className="btn btn-ghost" style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-            {deleting ? 'Deleting...' : 'Delete all data'}
-          </button>
-          <a href={`${API_URL}/disconnect`} className="btn btn-ghost" style={{ fontSize: '0.78rem' }}>
-            Disconnect
-          </a>
-        </div>
+      {/* Greeting */}
+      <div className="fade-up" style={{ marginBottom: '2.5rem' }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
+          Hello{me.display_name ? `, ${me.display_name}` : ''}
+        </h1>
+        {me.home_city && me.home_country && (
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+            Based in {me.home_city}, {me.home_country}
+          </p>
+        )}
       </div>
 
       {/* Stats */}

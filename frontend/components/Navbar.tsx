@@ -1,20 +1,25 @@
 'use client'
 
-/**
- * Glass morphism top navigation bar.
- * Static — brand logo + route links. Auth state lives in page content.
- */
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
+import { API_URL } from "@/lib/api";
 
 export default function Navbar() {
+  const [isDemo, setIsDemo] = useState(false);
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/me`, { credentials: "include" })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.demo) setIsDemo(true) })
+      .catch(() => {})
+  }, []);
+
   return (
     <header
       style={{
         position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
+        top: 0, left: 0, right: 0,
         zIndex: 50,
         height: "60px",
         display: "flex",
@@ -37,32 +42,45 @@ export default function Navbar() {
           justifyContent: "space-between",
         }}
       >
-        {/* Brand */}
-        <Link
-          href="/"
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "1.15rem",
-            fontWeight: 600,
-            color: "var(--text)",
-            textDecoration: "none",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.45rem",
-            letterSpacing: "0.01em",
-          }}
-        >
-          <span style={{ color: "var(--text-accent)", fontSize: "1.1rem" }}>✦</span>
-          Travel DNA
-        </Link>
+        {/* Brand + demo pill */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <Link
+            href="/"
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "1.15rem",
+              fontWeight: 600,
+              color: "var(--text)",
+              textDecoration: "none",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.45rem",
+              letterSpacing: "0.01em",
+            }}
+          >
+            <span style={{ color: "var(--text-accent)", fontSize: "1.1rem" }}>✦</span>
+            Travel DNA
+          </Link>
+          {isDemo && (
+            <span style={{
+              fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.1em",
+              textTransform: "uppercase", color: "#040b18",
+              background: "var(--text-accent)", borderRadius: "var(--radius-sm)",
+              padding: "0.15rem 0.5rem",
+            }}>
+              Demo
+            </span>
+          )}
+        </div>
 
-        {/* Nav links + theme toggle */}
+        {/* Nav links + optional exit-demo + theme toggle */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
           {[
             { href: "/",             label: "Profile"     },
             { href: "/email-scan",   label: "Scan"        },
             { href: "/scan",         label: "Results"     },
             { href: "/preferences",  label: "Categories"  },
+            { href: "/account",      label: "Account"     },
           ].map(({ href, label }) => (
             <Link
               key={href}
@@ -89,6 +107,31 @@ export default function Navbar() {
               {label}
             </Link>
           ))}
+
+          {isDemo && (
+            <>
+              <div style={{ width: "1px", height: 18, background: "var(--border)", margin: "0 0.25rem" }} aria-hidden="true" />
+              <a
+                href={`${API_URL}/auth`}
+                style={{
+                  padding: "0.35rem 0.8rem",
+                  borderRadius: "var(--radius-md)",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                  color: "var(--text-accent)",
+                  border: "1px solid var(--border-accent)",
+                  textDecoration: "none",
+                  transition: "background 180ms ease",
+                  whiteSpace: "nowrap",
+                }}
+                onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = "rgba(0,212,170,0.08)")}
+                onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = "transparent")}
+              >
+                Sign In →
+              </a>
+            </>
+          )}
+
           <div style={{ width: "1px", height: 18, background: "var(--border)", margin: "0 0.4rem" }} aria-hidden="true" />
           <ThemeToggle />
         </div>

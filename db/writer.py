@@ -49,6 +49,56 @@ def delete_user(user_email: str) -> bool:
     return len(res.data) > 0
 
 
+def set_openrouter_key(user_email: str, plaintext: str) -> None:
+    from crypto.secrets import encrypt_secret
+    encrypted = encrypt_secret(plaintext)
+    db = get_client()
+    db.table("users").upsert(
+        {
+            "email": user_email,
+            "openrouter_api_key_encrypted": encrypted.hex(),
+            "openrouter_api_key_updated_at": _now(),
+        },
+        on_conflict="email",
+    ).execute()
+
+
+def save_user_signals(user_email: str, signals: dict) -> None:
+    db = get_client()
+    db.table("users").upsert(
+        {"email": user_email, "custom_signals": signals},
+        on_conflict="email",
+    ).execute()
+
+
+def save_user_profile_info(
+    user_email: str,
+    *,
+    display_name: str | None,
+    home_city: str | None,
+    home_country: str | None,
+    home_country_code: str | None,
+) -> None:
+    db = get_client()
+    db.table("users").upsert(
+        {
+            "email":             user_email,
+            "display_name":      display_name,
+            "home_city":         home_city,
+            "home_country":      home_country,
+            "home_country_code": home_country_code,
+        },
+        on_conflict="email",
+    ).execute()
+
+
+def clear_openrouter_key(user_email: str) -> None:
+    db = get_client()
+    db.table("users").update(
+        {"openrouter_api_key_encrypted": None, "openrouter_api_key_updated_at": None}
+    ).eq("email", user_email).execute()
+
+
 def persist(user_email: str, bookings: list[dict], profile: dict) -> None:
     db = get_client()
 

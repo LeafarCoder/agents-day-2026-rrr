@@ -29,6 +29,50 @@ def _trip_label(start_dt: datetime, end_dt: datetime) -> str | None:
     return f"{months} month" if months == 1 else f"{months} months"
 
 
+def get_user_signals(user_email: str) -> dict:
+    """Return the user's custom category/keyword overrides (empty dict if none)."""
+    try:
+        db = get_client()
+        res = db.table("users").select("custom_signals").eq("email", user_email).execute()
+        return (res.data[0].get("custom_signals") or {}) if res.data else {}
+    except Exception:
+        return {}
+
+
+def get_openrouter_key(user_email: str) -> str | None:
+    """Return the decrypted OpenRouter API key for a user, or None if not set."""
+    try:
+        db = get_client()
+        res = (
+            db.table("users")
+            .select("openrouter_api_key_encrypted")
+            .eq("email", user_email)
+            .execute()
+        )
+        if not res.data or not res.data[0].get("openrouter_api_key_encrypted"):
+            return None
+        from crypto.secrets import decrypt_secret
+        return decrypt_secret(bytes.fromhex(res.data[0]["openrouter_api_key_encrypted"]))
+    except Exception as exc:
+        from observability.logger import get as _get
+        _get("db.reader").exception(f"get_openrouter_key failed  user={user_email}  err={exc}")
+        return None
+
+
+def has_openrouter_key(user_email: str) -> bool:
+    try:
+        db = get_client()
+        res = (
+            db.table("users")
+            .select("openrouter_api_key_encrypted")
+            .eq("email", user_email)
+            .execute()
+        )
+        return bool(res.data and res.data[0].get("openrouter_api_key_encrypted"))
+    except Exception:
+        return False
+
+
 def get_email_extraction(gmail_msg_id: str) -> dict | None:
     """Return cached LLM extraction for an email, or None if not yet extracted."""
     try:

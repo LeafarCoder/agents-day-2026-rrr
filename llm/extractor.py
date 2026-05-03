@@ -151,9 +151,9 @@ Respond with valid JSON only.\
 """
 
 
-def _build_booking_prompt(subject: str, body: str) -> str:
-    from detection.config import get_activity_signals
-    signals = get_activity_signals()
+def _build_booking_prompt(subject: str, body: str, user_signals: dict | None = None) -> str:
+    from detection.config import get_merged_signals
+    signals = get_merged_signals(user_signals)
     lines = [f'  {cat}: {", ".join(kws)}' for cat, kws in signals.items()]
     categories_spec = "\n".join(lines)
     return _BOOKING_PROMPT.format(
@@ -163,20 +163,21 @@ def _build_booking_prompt(subject: str, body: str) -> str:
     )
 
 
-def extract_booking(subject: str, body: str) -> dict:
+def extract_booking(subject: str, body: str, api_key: str | None = None, user_signals: dict | None = None) -> dict:
     """Extract destination, country, dates, booking type and activity categories from an email."""
-    if not OPENROUTER_API_KEY:
-        raise RuntimeError("OPENROUTER_API_KEY is not set — LLM extraction unavailable")
+    key = api_key or OPENROUTER_API_KEY
+    if not key:
+        raise RuntimeError("No OpenRouter API key available — set OPENROUTER_API_KEY or provide one via the app.")
 
-    prompt = _build_booking_prompt(subject, body)
+    prompt = _build_booking_prompt(subject, body, user_signals)
 
-    log.info(f"LLM  extract_booking  model={OPENROUTER_MODEL}  subject={subject[:60]!r}")
+    log.info(f"LLM  extract_booking  model={OPENROUTER_MODEL}  key_source={'user' if api_key else 'env'}  subject={subject[:60]!r}")
 
     for attempt in range(5):
         response = httpx.post(
             _OPENROUTER_URL,
             headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Authorization": f"Bearer {key}",
                 "Content-Type": "application/json",
                 "HTTP-Referer": "https://email-travel-parser",
                 "X-Title": "Email Travel Parser",

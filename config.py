@@ -5,7 +5,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-SECRET_KEY           = os.environ.get("SECRET_KEY", "dev-secret-change-in-prod")
+SECRET_KEY              = os.environ.get("SECRET_KEY", "dev-secret-change-in-prod")
+SECRETS_ENCRYPTION_KEY  = os.environ.get("SECRETS_ENCRYPTION_KEY", "")
 SUPABASE_URL         = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY         = os.environ.get("SUPABASE_KEY", "")
 CREDENTIALS_FILE     = os.path.join(os.path.dirname(__file__), "credentials.json")

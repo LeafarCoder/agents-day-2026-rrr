@@ -1,0 +1,145 @@
+'use client'
+
+import { useState } from 'react'
+import { API_URL } from '@/lib/api'
+
+type Props = {
+  onSaved: () => void
+  onDismiss: () => void
+}
+
+export default function OpenRouterKeyModal({ onSaved, onDismiss }: Props) {
+  const [key, setKey] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSave() {
+    const trimmed = key.trim()
+    if (!trimmed) return
+    setSaving(true)
+    setError('')
+    try {
+      const res = await fetch(`${API_URL}/api/settings/openrouter-key`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: trimmed }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.detail ?? data.error ?? 'Something went wrong.')
+      } else {
+        onSaved()
+      }
+    } catch {
+      setError('Could not reach the server. Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 100,
+      background: 'rgba(0,0,0,0.55)',
+      backdropFilter: 'blur(8px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '1.5rem',
+    }}>
+      <div className="glass fade-in" style={{
+        borderRadius: 'var(--radius-xl)',
+        padding: '2rem',
+        width: '100%', maxWidth: 480,
+        border: '1px solid var(--border)',
+        boxShadow: '0 32px 80px rgba(0,0,0,0.4)',
+      }}>
+        {/* Header */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <h2 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '1.4rem', fontWeight: 600,
+            color: 'var(--text)', margin: 0, marginBottom: '0.5rem',
+          }}>
+            One last step
+          </h2>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.65, margin: 0 }}>
+            Travel DNA uses <strong style={{ color: 'var(--text)' }}>OpenRouter</strong> to parse your emails with AI. You'll need your own key — you pay only for what you use, and your emails never leave your device.
+          </p>
+        </div>
+
+        {/* Models & cost */}
+        <div className="glass-subtle" style={{
+          borderRadius: 'var(--radius-lg)', padding: '1rem',
+          marginBottom: '1.25rem', fontSize: '0.78rem',
+        }}>
+          <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '0.5rem' }}>Models used</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', color: 'var(--text-muted)' }}>
+            <div>
+              <span style={{ color: 'var(--text-accent)', fontFamily: 'monospace' }}>minimax/minimax-m1</span>
+              {' — '}booking extraction & preferences
+            </div>
+            <div>
+              <span style={{ color: 'var(--text-accent)', fontFamily: 'monospace' }}>openai/text-embedding-3-small</span>
+              {' — '}taste-profile embeddings
+            </div>
+          </div>
+          <div style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '0.5rem' }}>
+            A 1-year inbox scan typically costs under <strong style={{ color: 'var(--text)' }}>$2</strong>.
+          </div>
+        </div>
+
+        {/* Instructions */}
+        <ol style={{ fontSize: '0.82rem', color: 'var(--text-muted)', paddingLeft: '1.25rem', margin: '0 0 1.25rem', lineHeight: 1.8 }}>
+          <li>
+            <a
+              href="https://openrouter.ai/keys"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'var(--text-accent)', textDecoration: 'none' }}
+              onMouseEnter={e => ((e.target as HTMLElement).style.textDecoration = 'underline')}
+              onMouseLeave={e => ((e.target as HTMLElement).style.textDecoration = 'none')}
+            >
+              Sign up at openrouter.ai →
+            </a>
+          </li>
+          <li>Add a small credit balance (e.g. $5)</li>
+          <li>Create an API key in your account settings</li>
+          <li>Paste it below</li>
+        </ol>
+
+        {/* Key input */}
+        <input
+          type="password"
+          className="input"
+          placeholder="sk-or-v1-..."
+          value={key}
+          onChange={e => setKey(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleSave() }}
+          style={{ marginBottom: error ? '0.5rem' : '1rem' }}
+          autoFocus
+        />
+        {error && (
+          <p style={{ fontSize: '0.78rem', color: '#f87171', margin: '0 0 0.75rem' }}>{error}</p>
+        )}
+
+        {/* Actions */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
+          <button
+            onClick={onDismiss}
+            style={{ fontSize: '0.78rem', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          >
+            I&apos;ll add it later
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!key.trim() || saving}
+            className="btn btn-primary"
+            style={{ fontSize: '0.88rem' }}
+          >
+            {saving ? 'Verifying…' : 'Save key'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}

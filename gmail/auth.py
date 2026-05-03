@@ -7,6 +7,8 @@ from google_auth_oauthlib.flow import Flow
 
 from config import CREDENTIALS_FILE, SCOPES
 
+DEMO_USER_EMAIL = "email.travel.parser@gmail.com"
+
 
 def make_flow(redirect_uri: str) -> Flow:
     return Flow.from_client_secrets_file(
@@ -40,3 +42,15 @@ def save_credentials_to_session(creds: Credentials, session: dict) -> None:
         "client_secret": creds.client_secret,
         "scopes":        list(creds.scopes or SCOPES),
     }
+
+
+def get_current_user_email(session: dict) -> str | None:
+    """Return the user's email from demo flag or live Gmail credentials."""
+    if session.get("demo"):
+        return DEMO_USER_EMAIL
+    creds = credentials_from_session(session)
+    if not creds:
+        return None
+    from googleapiclient.discovery import build
+    service = build("gmail", "v1", credentials=creds)
+    return service.users().getProfile(userId="me").execute()["emailAddress"]

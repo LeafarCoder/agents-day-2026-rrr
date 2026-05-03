@@ -31,17 +31,18 @@ def embedding_model_name() -> str:
     return _OLLAMA_MODEL
 
 
-def embed_text(text: str) -> list[float]:
+def embed_text(text: str, api_key: str | None = None) -> list[float]:
     """Embed text with the configured provider into the schema's vector size."""
     if EMBEDDING_PROVIDER == "openrouter":
+        key = api_key or OPENROUTER_API_KEY
         log.info(
             f"Embed  provider=openrouter  model={OPENROUTER_EMBEDDING_MODEL}  "
-            f"dims={EMBEDDING_DIMENSIONS}  chars={len(text)}"
+            f"key_source={'user' if api_key else 'env'}  dims={EMBEDDING_DIMENSIONS}  chars={len(text)}"
         )
         response = httpx.post(
             _OPENROUTER_URL,
             headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Authorization": f"Bearer {key}",
                 "Content-Type": "application/json",
                 "HTTP-Referer": "https://email-travel-parser",
                 "X-Title": "Email Travel Parser",

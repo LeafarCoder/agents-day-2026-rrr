@@ -124,14 +124,19 @@ def _save_custom(data: dict[str, list[str]]) -> None:
         json.dump(data, f, indent=2)
 
 
-def get_activity_signals() -> dict[str, list[str]]:
+def get_merged_signals(user_custom: dict | None = None) -> dict[str, list[str]]:
+    """Merge defaults with per-user custom signals."""
     merged = {k: list(v) for k, v in _DEFAULT_ACTIVITY_SIGNALS.items()}
-    for cat, keywords in _load_custom().items():
+    for cat, keywords in (user_custom or {}).items():
         if cat in merged:
             merged[cat] = list(dict.fromkeys(merged[cat] + keywords))
         else:
-            merged[cat] = keywords
+            merged[cat] = list(keywords)
     return merged
+
+
+def get_activity_signals() -> dict[str, list[str]]:
+    return get_merged_signals(_load_custom())
 
 
 def add_category(name: str) -> None:
