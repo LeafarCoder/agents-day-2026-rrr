@@ -15,6 +15,7 @@ export default function OpenRouterKeyModal({ onSaved, onDismiss }: Props) {
   const [showPricingTip, setShowPricingTip] = useState(false)
   const [showModels, setShowModels] = useState(false)
   const [showInstructions, setShowInstructions] = useState(false)
+  const [showKey, setShowKey] = useState(false)
 
   async function handleSave() {
     const trimmed = key.trim()
@@ -166,16 +167,42 @@ export default function OpenRouterKeyModal({ onSaved, onDismiss }: Props) {
         </div>
 
         {/* Key input */}
-        <input
-          type="password"
-          className="input"
-          placeholder="sk-or-v1-..."
-          value={key}
-          onChange={e => setKey(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') handleSave() }}
-          style={{ marginBottom: error ? '0.5rem' : '1rem' }}
-          autoFocus
-        />
+        <div style={{ position: 'relative', marginBottom: error ? '0.5rem' : '1rem' }}>
+          <input
+            type={showKey ? 'text' : 'password'}
+            className="input"
+            placeholder="sk-or-v1-..."
+            value={key}
+            onChange={e => setKey(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleSave() }}
+            style={{ width: '100%', paddingRight: '2.5rem', boxSizing: 'border-box' }}
+            autoFocus
+          />
+          <button
+            type="button"
+            onClick={() => setShowKey(v => !v)}
+            style={{
+              position: 'absolute', right: '0.6rem', top: '50%', transform: 'translateY(-50%)',
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: '0.2rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center',
+            }}
+            tabIndex={-1}
+            aria-label={showKey ? 'Hide key' : 'Show key'}
+          >
+            {showKey ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            )}
+          </button>
+        </div>
         {error && (
           <p style={{ fontSize: '0.78rem', color: '#f87171', margin: '0 0 0.75rem' }}>{error}</p>
         )}
