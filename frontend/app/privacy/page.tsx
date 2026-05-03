@@ -147,7 +147,7 @@ export default function PrivacyPage() {
             </li>
           </ul>
           <P>
-            We access Gmail under a <strong>read-only</strong> scope. We never read, write,
+            We access Gmail under a <strong>read-only</strong> scope. We never write,
             compose, send, delete, or modify emails or any other Gmail data.
           </P>
         </Section>
