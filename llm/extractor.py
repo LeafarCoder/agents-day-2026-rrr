@@ -208,10 +208,19 @@ def extract_booking(subject: str, body: str, api_key: str | None = None, user_si
         # Reasoning models (e.g. MiniMax M1) put chain-of-thought in reasoning and
         # the final answer at the end. Concatenate both so the scanner sees everything.
         raw = (message.get("reasoning") or "") + (message.get("content") or "")
-        log.debug(f"LLM extract_booking raw (last 500): {raw[-500:]!r}")
+        log.info(f"LLM extract_booking raw  subject={subject[:60]!r}  response={raw[:600]!r}")
         try:
             result = _load_json_object(raw, prefer_keys=_BOOKING_KEYS)
-            log.info(f"LLM extract_booking ok  city={result.get('destination_city')!r}  country={result.get('destination_country')!r}")
+            log.info(
+                f"LLM extract_booking ok"
+                f"  is_travel={result.get('is_travel_booking')}"
+                f"  city={result.get('destination_city')!r}"
+                f"  country={result.get('destination_country')!r}"
+                f"  type={result.get('booking_type')!r}"
+                f"  start={result.get('start_date')!r}"
+                f"  end={result.get('end_date')!r}"
+                f"  categories={result.get('categories')}"
+            )
             return result
         except ValueError:
             log.warning(f"LLM extract_booking: no JSON in response  subject={subject[:60]!r}  raw_tail={raw[-300:]!r}")
