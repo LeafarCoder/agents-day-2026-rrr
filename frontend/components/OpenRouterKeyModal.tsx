@@ -12,6 +12,7 @@ export default function OpenRouterKeyModal({ onSaved, onDismiss }: Props) {
   const [key, setKey] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [showPricingTip, setShowPricingTip] = useState(false)
 
   async function handleSave() {
     const trimmed = key.trim()
@@ -85,8 +86,37 @@ export default function OpenRouterKeyModal({ onSaved, onDismiss }: Props) {
               {' — '}taste-profile embeddings
             </div>
           </div>
-          <div style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '0.5rem' }}>
+          <div style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             Approximately <strong style={{ color: 'var(--text)' }}>$1</strong> per 1,000 emails scanned.
+            <span
+              style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
+              onMouseEnter={() => setShowPricingTip(true)}
+              onMouseLeave={() => setShowPricingTip(false)}
+            >
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ cursor: 'default', flexShrink: 0, opacity: 0.55 }}>
+                <circle cx="6.5" cy="6.5" r="6" stroke="currentColor" strokeWidth="1.2"/>
+                <text x="6.5" y="9.5" textAnchor="middle" fontSize="7.5" fill="currentColor" fontFamily="sans-serif">i</text>
+              </svg>
+              {showPricingTip && (
+                <div style={{
+                  position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: 230, background: 'var(--nav-surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.6rem 0.75rem',
+                  boxShadow: 'var(--shadow-md)',
+                  pointerEvents: 'none', zIndex: 200,
+                  fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.6,
+                }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '0.3rem' }}>Estimate assumptions</div>
+                  <div>· ~1,100 words per email (~1,500 input tokens)</div>
+                  <div>· ~150 output tokens per response</div>
+                  <div>· MiniMax M1: $0.40/M input, $2.20/M output</div>
+                  <div>· Embeddings cost is negligible</div>
+                </div>
+              )}
+            </span>
           </div>
         </div>
 
