@@ -22,6 +22,7 @@
 :root {
   --surface:          rgba(8, 15, 26, 0.62);
   --surface-alt:      rgba(8, 15, 26, 0.35);
+  --surface-solid:    #0c1524;
   --surface-hover:    rgba(255, 255, 255, 0.07);
   --nav-surface:      rgba(4, 11, 24, 0.72);
   --nav-border:       rgba(255, 255, 255, 0.06);
@@ -46,6 +47,7 @@
 [data-theme="light"] {
   --surface:          rgba(255, 250, 242, 0.88);
   --surface-alt:      rgba(248, 240, 228, 0.65);
+  --surface-solid:    #f0e6d4;
   --surface-hover:    rgba(0, 0, 0, 0.05);
   --nav-surface:      rgba(245, 237, 224, 0.92);
   --nav-border:       rgba(0, 0, 0, 0.06);

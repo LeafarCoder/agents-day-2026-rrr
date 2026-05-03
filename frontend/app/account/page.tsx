@@ -311,7 +311,7 @@ export default function AccountPage() {
                 zIndex: 50,
                 borderRadius: 'var(--radius-lg)',
                 border: '1px solid var(--border)',
-                background: 'var(--surface, #0d1b2a)',
+                background: 'var(--surface-solid)',
                 boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
                 overflow: 'hidden',
               }}>
@@ -378,8 +378,34 @@ export default function AccountPage() {
         )}
       </div>
 
-      {/* Session card */}
+      {/* Activity categories card */}
       <div className="fade-up d-300 glass-subtle" style={{ borderRadius: 'var(--radius-xl)', padding: '1.5rem', marginBottom: '1rem' }}>
+        <h2 style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '0 0 0.6rem' }}>
+          Activity Categories
+        </h2>
+        <p style={{ fontSize: '0.83rem', color: 'var(--text-muted)', margin: '0 0 1rem', lineHeight: 1.55 }}>
+          Keywords used to detect activity types in your travel emails. Customise which categories and terms are matched during a scan.
+        </p>
+        <Link
+          href="/categories"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+            fontSize: '0.82rem', fontWeight: 500,
+            color: 'var(--text-accent)', textDecoration: 'none',
+            padding: '0.4rem 0.85rem',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--border-accent)',
+            transition: 'background 150ms',
+          }}
+          onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(0,212,170,0.08)')}
+          onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+        >
+          Manage categories →
+        </Link>
+      </div>
+
+      {/* Session card */}
+      <div className="fade-up d-400 glass-subtle" style={{ borderRadius: 'var(--radius-xl)', padding: '1.5rem', marginBottom: '1rem' }}>
         <h2 style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '0 0 1rem' }}>
           Session
         </h2>
@@ -399,7 +425,7 @@ export default function AccountPage() {
 
       {/* Danger zone */}
       {!isDemo && (
-        <div className="fade-up d-400" style={{
+        <div className="fade-up d-500" style={{
           borderRadius: 'var(--radius-xl)',
           padding: '1.5rem',
           marginBottom: '1rem',
