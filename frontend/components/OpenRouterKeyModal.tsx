@@ -13,6 +13,8 @@ export default function OpenRouterKeyModal({ onSaved, onDismiss }: Props) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [showPricingTip, setShowPricingTip] = useState(false)
+  const [showModels, setShowModels] = useState(false)
+  const [showInstructions, setShowInstructions] = useState(false)
 
   async function handleSave() {
     const trimmed = key.trim()
@@ -70,74 +72,98 @@ export default function OpenRouterKeyModal({ onSaved, onDismiss }: Props) {
           </p>
         </div>
 
-        {/* Models & cost */}
-        <div className="glass-subtle" style={{
-          borderRadius: 'var(--radius-lg)', padding: '1rem',
-          marginBottom: '1.25rem', fontSize: '0.78rem',
-        }}>
-          <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '0.5rem' }}>Models used</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', color: 'var(--text-muted)' }}>
-            <div>
-              <span style={{ color: 'var(--text-accent)', fontFamily: 'monospace' }}>minimax/minimax-m1</span>
-              {' — '}booking extraction & preferences
-            </div>
-            <div>
-              <span style={{ color: 'var(--text-accent)', fontFamily: 'monospace' }}>openai/text-embedding-3-small</span>
-              {' — '}taste-profile embeddings
-            </div>
-          </div>
-          <div style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            Approximately <strong style={{ color: 'var(--text)' }}>$1</strong> per 1,000 emails scanned.
-            <span
-              style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
-              onMouseEnter={() => setShowPricingTip(true)}
-              onMouseLeave={() => setShowPricingTip(false)}
-            >
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ cursor: 'default', flexShrink: 0, opacity: 0.55 }}>
-                <circle cx="6.5" cy="6.5" r="6" stroke="currentColor" strokeWidth="1.2"/>
-                <text x="6.5" y="9.5" textAnchor="middle" fontSize="7.5" fill="currentColor" fontFamily="sans-serif">i</text>
-              </svg>
-              {showPricingTip && (
-                <div style={{
-                  position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: 230, background: 'var(--nav-surface)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '0.6rem 0.75rem',
-                  boxShadow: 'var(--shadow-md)',
-                  pointerEvents: 'none', zIndex: 200,
-                  fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.6,
-                }}>
-                  <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '0.3rem' }}>Estimate assumptions</div>
-                  <div>· ~1,100 words per email (~1,500 input tokens)</div>
-                  <div>· ~150 output tokens per response</div>
-                  <div>· MiniMax M1: $0.40/M input, $2.20/M output</div>
-                  <div>· Embeddings cost is negligible</div>
+        {/* Collapsible: Models & cost */}
+        <div style={{ marginBottom: '0.75rem' }}>
+          <button
+            onClick={() => setShowModels(v => !v)}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ transform: showModels ? 'rotate(90deg)' : 'none', transition: 'transform 200ms', flexShrink: 0 }}>
+              <path d="M3 2l4 3-4 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Models used
+          </button>
+
+          {showModels && (
+            <div className="glass-subtle" style={{ borderRadius: 'var(--radius-lg)', padding: '0.85rem 1rem', marginTop: '0.5rem', fontSize: '0.78rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', color: 'var(--text-muted)' }}>
+                <div>
+                  <span style={{ color: 'var(--text-accent)', fontFamily: 'monospace' }}>minimax/minimax-m1</span>
+                  {' — '}booking extraction & preferences
                 </div>
-              )}
-            </span>
-          </div>
+                <div>
+                  <span style={{ color: 'var(--text-accent)', fontFamily: 'monospace' }}>openai/text-embedding-3-small</span>
+                  {' — '}taste-profile embeddings
+                </div>
+              </div>
+              <div style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                Approximately <strong style={{ color: 'var(--text)' }}>$1</strong> per 1,000 emails scanned.
+                <span
+                  style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
+                  onMouseEnter={() => setShowPricingTip(true)}
+                  onMouseLeave={() => setShowPricingTip(false)}
+                >
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ cursor: 'default', flexShrink: 0, opacity: 0.55 }}>
+                    <circle cx="6.5" cy="6.5" r="6" stroke="currentColor" strokeWidth="1.2"/>
+                    <text x="6.5" y="9.5" textAnchor="middle" fontSize="7.5" fill="currentColor" fontFamily="sans-serif">i</text>
+                  </svg>
+                  {showPricingTip && (
+                    <div style={{
+                      position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: 230, background: 'var(--nav-surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '0.6rem 0.75rem',
+                      boxShadow: 'var(--shadow-md)',
+                      pointerEvents: 'none', zIndex: 200,
+                      fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.6,
+                    }}>
+                      <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '0.3rem' }}>Estimate assumptions</div>
+                      <div>· ~1,100 words per email (~1,500 input tokens)</div>
+                      <div>· ~150 output tokens per response</div>
+                      <div>· MiniMax M1: $0.40/M input, $2.20/M output</div>
+                      <div>· Embeddings cost is negligible</div>
+                    </div>
+                  )}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Instructions */}
-        <ol style={{ fontSize: '0.82rem', color: 'var(--text-muted)', paddingLeft: '1.25rem', margin: '0 0 1.25rem', lineHeight: 1.8 }}>
-          <li>
-            <a
-              href="https://openrouter.ai/keys"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: 'var(--text-accent)', textDecoration: 'none' }}
-              onMouseEnter={e => ((e.target as HTMLElement).style.textDecoration = 'underline')}
-              onMouseLeave={e => ((e.target as HTMLElement).style.textDecoration = 'none')}
-            >
-              Sign up at openrouter.ai →
-            </a>
-          </li>
-          <li>Add a small credit balance (e.g. $5)</li>
-          <li>Create an API key in your account settings</li>
-          <li>Paste it below</li>
-        </ol>
+        {/* Collapsible: Sign-up instructions */}
+        <div style={{ marginBottom: '1.25rem' }}>
+          <button
+            onClick={() => setShowInstructions(v => !v)}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ transform: showInstructions ? 'rotate(90deg)' : 'none', transition: 'transform 200ms', flexShrink: 0 }}>
+              <path d="M3 2l4 3-4 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            How to get a key
+          </button>
+
+          {showInstructions && (
+            <ol style={{ fontSize: '0.82rem', color: 'var(--text-muted)', paddingLeft: '1.25rem', margin: '0.5rem 0 0', lineHeight: 1.8 }}>
+              <li>
+                <a
+                  href="https://openrouter.ai/keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: 'var(--text-accent)', textDecoration: 'none' }}
+                  onMouseEnter={e => ((e.target as HTMLElement).style.textDecoration = 'underline')}
+                  onMouseLeave={e => ((e.target as HTMLElement).style.textDecoration = 'none')}
+                >
+                  Sign up at openrouter.ai →
+                </a>
+              </li>
+              <li>Add a small credit balance (e.g. $5)</li>
+              <li>Create an API key in your account settings</li>
+              <li>Paste it below</li>
+            </ol>
+          )}
+        </div>
 
         {/* Key input */}
         <input
