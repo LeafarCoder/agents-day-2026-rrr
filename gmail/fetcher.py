@@ -24,7 +24,7 @@ def build_query(since: date, until: date, exclude: list[str] | None = None) -> s
     domain_clauses   = " OR ".join(f"from:{d}" for d in sorted(TRAVEL_DOMAINS))
     subject_clauses  = " OR ".join(f"subject:{kw}" for kw in SUBJECT_KEYWORDS)
     exclude_clauses  = " ".join(
-        _EXCLUDE_CLAUSES[k] for k in (exclude or []) if k in _EXCLUDE_CLAUSES
+        _EXCLUDE_CLAUSES.get(k, f"-label:{k}") for k in (exclude or [])
     )
     query = f"(({domain_clauses}) OR ({subject_clauses}))"
     if exclude_clauses:

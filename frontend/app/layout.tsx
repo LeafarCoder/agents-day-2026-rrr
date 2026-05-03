@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Playfair_Display, DM_Sans } from "next/font/google";
+import Link from "next/link";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 
@@ -36,6 +37,11 @@ export default function RootLayout({
       <body>
         <Navbar />
         <main>{children}</main>
+        <footer style={{ textAlign: 'center', padding: '1.5rem', borderTop: '1px solid var(--border)' }}>
+          <Link href="/privacy" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textDecoration: 'none' }}>
+            Privacy Policy
+          </Link>
+        </footer>
       </body>
     </html>
   );

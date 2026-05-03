@@ -9,6 +9,7 @@ const STEP_ORDER = ['auth', 'fetching', 'parsing', 'profiling', 'saving', 'done'
 
 export default function EmailScanPage() {
   const [connected, setConnected] = useState<boolean | null>(null)
+  const [isDemo, setIsDemo] = useState(false)
   const [loading, setLoading] = useState(true)
   const [scanning, setScanning] = useState(false)
   const [steps, setSteps] = useState<ScanStep[]>([])
@@ -24,12 +25,15 @@ export default function EmailScanPage() {
     social:     true,
     forums:     true,
   })
+  const [customLabels, setCustomLabels] = useState<{ name: string; excluded: boolean }[]>([])
+  const [newLabelInput, setNewLabelInput] = useState('')
 
   useEffect(() => {
     fetch(`${API_URL}/api/me`, { credentials: 'include' })
       .then(r => r.json())
       .then((data) => {
         setConnected(data.connected)
+        setIsDemo(data.demo ?? false)
         setFromDate(data.default_from ?? '')
         setToDate(data.default_to ?? '')
       })
@@ -51,10 +55,14 @@ export default function EmailScanPage() {
     setScanError('')
     setEmailsExpanded(false)
 
-    const excludeParams = (Object.keys(excludeFilters) as (keyof typeof excludeFilters)[])
-      .filter(k => excludeFilters[k])
-      .map(k => `exclude=${k}`)
-      .join('&')
+    const excludeParams = [
+      ...(Object.keys(excludeFilters) as (keyof typeof excludeFilters)[])
+        .filter(k => excludeFilters[k])
+        .map(k => `exclude=${k}`),
+      ...customLabels
+        .filter(l => l.excluded)
+        .map(l => `exclude=${encodeURIComponent(l.name)}`),
+    ].join('&')
     const url = `${API_URL}/scan/stream?from_date=${fromDate}&to_date=${toDate}${excludeParams ? '&' + excludeParams : ''}`
     const es = new EventSource(url, { withCredentials: true })
 
@@ -70,7 +78,11 @@ export default function EmailScanPage() {
       if (event.step === 'error') {
         es.close()
         setScanning(false)
-        setScanError(event.msg)
+        if (event.msg === 'openrouter_key_missing') {
+          setScanError('No OpenRouter key configured. Go to your profile and add your API key first.')
+        } else {
+          setScanError(event.msg)
+        }
       }
     }
     es.onerror = () => {
@@ -78,6 +90,13 @@ export default function EmailScanPage() {
       setScanning(false)
       setScanError('Connection lost. Please try again.')
     }
+  }
+
+  function addCustomLabel() {
+    const trimmed = newLabelInput.trim()
+    if (!trimmed || customLabels.some(l => l.name === trimmed)) return
+    setCustomLabels(prev => [...prev, { name: trimmed, excluded: true }])
+    setNewLabelInput('')
   }
 
   if (loading) {
@@ -91,6 +110,21 @@ export default function EmailScanPage() {
               animation: `fadeIn 0.6s ease ${i * 0.15}s both`,
             }} />
           ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (isDemo) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <div className="glass-subtle" style={{ textAlign: 'center', borderRadius: 'var(--radius-xl)', padding: '2.5rem 2rem', maxWidth: 420 }}>
+          <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🔒</div>
+          <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.5rem' }}>Scanning unavailable in demo mode</h2>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+            Sign in with your own Gmail account to scan your travel emails.
+          </p>
+          <a href={`${API_URL}/auth`} className="btn btn-primary" style={{ fontSize: '0.9rem' }}>Sign In</a>
         </div>
       </div>
     )
@@ -191,24 +225,71 @@ export default function EmailScanPage() {
             </button>
 
             {showAdvanced && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '0 0 0.25rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Exclude Gmail categories</p>
-                {([
-                  ['promotions', 'Promotions'],
-                  ['spam',       'Spam'],
-                  ['social',     'Social'],
-                  ['forums',     'Forums'],
-                ] as [keyof typeof excludeFilters, string][]).map(([key, label]) => (
-                  <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text)' }}>
-                    <input
-                      type="checkbox"
-                      checked={excludeFilters[key]}
-                      onChange={e => setExcludeFilters(prev => ({ ...prev, [key]: e.target.checked }))}
-                      style={{ accentColor: 'var(--text-accent)', width: 14, height: 14 }}
-                    />
-                    {label}
-                  </label>
-                ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.06)' }}>
+
+                <div>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '0 0 0.4rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Gmail Categories</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {([
+                      ['promotions', 'Promotions'],
+                      ['spam',       'Spam'],
+                      ['social',     'Social'],
+                      ['forums',     'Forums'],
+                    ] as [keyof typeof excludeFilters, string][]).map(([key, label]) => (
+                      <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text)' }}>
+                        <input
+                          type="checkbox"
+                          checked={excludeFilters[key]}
+                          onChange={e => setExcludeFilters(prev => ({ ...prev, [key]: e.target.checked }))}
+                          style={{ accentColor: 'var(--text-accent)', width: 14, height: 14 }}
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
+
+                <div>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '0 0 0.4rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Custom Labels</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {customLabels.map((lbl, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text)' }}>
+                          <input
+                            type="checkbox"
+                            checked={lbl.excluded}
+                            onChange={e => setCustomLabels(prev => prev.map((l, idx) => idx === i ? { ...l, excluded: e.target.checked } : l))}
+                            style={{ accentColor: 'var(--text-accent)', width: 14, height: 14 }}
+                          />
+                          {lbl.name}
+                        </label>
+                        <button
+                          onClick={() => setCustomLabels(prev => prev.filter((_, idx) => idx !== i))}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1rem', lineHeight: 1, padding: '0 0.25rem' }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: customLabels.length > 0 ? '0.25rem' : 0 }}>
+                      <input
+                        type="text"
+                        value={newLabelInput}
+                        onChange={e => setNewLabelInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') addCustomLabel() }}
+                        placeholder="Label name…"
+                        className="input"
+                        style={{ flex: 1, fontSize: '0.8rem' }}
+                      />
+                      <button onClick={addCustomLabel} className="btn btn-ghost" style={{ fontSize: '0.72rem', padding: '0.25rem 0.6rem' }}>
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             )}
           </div>
