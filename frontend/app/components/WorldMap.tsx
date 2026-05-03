@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from '@vnedyalk0v/react19-simple-maps'
 import worldTopology from '../../public/world-110m.json'
 
@@ -42,6 +42,31 @@ function flagEmoji(code: string) {
   ).join('')
 }
 
+const DARK_COLORS = {
+  mapBg:          'rgba(8,15,26,0.55)',
+  fullscreenBg:   '#080f1a',
+  unvisited:      'rgba(255,255,255,0.05)',
+  unvisitedHover: 'rgba(255,255,255,0.09)',
+  stroke:         'rgba(255,255,255,0.10)',
+  strokeHover:    'rgba(255,255,255,0.22)',
+  visited:        'rgba(0,212,170,0.22)',
+  visitedHover:   'rgba(0,212,170,0.45)',
+  visitedHoverStroke: 'rgba(0,212,170,0.85)',
+  visitedPressed: 'rgba(0,212,170,0.60)',
+}
+
+const LIGHT_COLORS = {
+  mapBg:          '#d8d2c8',
+  fullscreenBg:   '#f0e6d4',
+  unvisited:      'rgba(0,0,0,0.07)',
+  unvisitedHover: 'rgba(0,0,0,0.13)',
+  stroke:         'rgba(0,0,0,0.13)',
+  strokeHover:    'rgba(0,0,0,0.25)',
+  visited:        'rgba(0,160,130,0.30)',
+  visitedHover:   'rgba(0,160,130,0.55)',
+  visitedHoverStroke: 'rgba(0,140,115,0.90)',
+  visitedPressed: 'rgba(0,140,115,0.70)',
+}
 
 export default function WorldMap({
   countries,
@@ -52,6 +77,20 @@ export default function WorldMap({
 }) {
   const [selected, setSelected] = useState<CountryData | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
+  const [isDark, setIsDark] = useState(true)
+
+  // Track theme changes in real time
+  useEffect(() => {
+    function update() {
+      setIsDark(document.documentElement.getAttribute('data-theme') !== 'light')
+    }
+    update()
+    const obs = new MutationObserver(update)
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => obs.disconnect()
+  }, [])
+
+  const colors = isDark ? DARK_COLORS : LIGHT_COLORS
 
   const visitedMap = useMemo(
     () => new Map(countries.map(c => [c.code.toUpperCase(), c])),
@@ -71,29 +110,33 @@ export default function WorldMap({
             onClick={() => visited && setSelected(country!)}
             style={{
               default: {
-                fill: visited ? 'rgba(0,212,170,0.22)' : 'rgba(255,255,255,0.05)',
-                stroke: 'rgba(255,255,255,0.1)',
-                strokeWidth: 0.4,
-                outline: 'none',
-                cursor: visited ? 'pointer' : 'default',
-                transition: 'fill 120ms',
+                fill:         visited ? colors.visited    : colors.unvisited,
+                stroke:       colors.stroke,
+                strokeWidth:  0.4,
+                outline:      'none',
+                cursor:       visited ? 'pointer' : 'default',
+                transition:   'fill 120ms',
+                // prevent browser focus ring and interaction on unvisited countries
+                pointerEvents: visited ? 'auto' : 'none',
               },
               hover: {
-                fill: visited ? 'rgba(0,212,170,0.45)' : 'rgba(255,255,255,0.09)',
-                stroke: visited ? 'rgba(0,212,170,0.85)' : 'rgba(255,255,255,0.22)',
-                strokeWidth: visited ? 1.2 : 0.4,
-                outline: 'none',
-                cursor: visited ? 'pointer' : 'default',
+                fill:         visited ? colors.visitedHover    : colors.unvisitedHover,
+                stroke:       visited ? colors.visitedHoverStroke : colors.strokeHover,
+                strokeWidth:  visited ? 1.2 : 0.4,
+                outline:      'none',
+                cursor:       'pointer',
               },
               pressed: {
-                fill: visited ? 'rgba(0,212,170,0.6)' : 'rgba(255,255,255,0.05)',
-                outline: 'none',
+                fill:         visited ? colors.visitedPressed : colors.unvisited,
+                stroke:       visited ? colors.visitedHoverStroke : colors.stroke,
+                strokeWidth:  visited ? 1.2 : 0.4,
+                outline:      'none',
               },
             }}
           />
         )
       }),
-    [visitedMap]
+    [visitedMap, colors]
   )
 
   function MapCanvas({ zoomable }: { zoomable: boolean }) {
@@ -155,8 +198,8 @@ export default function WorldMap({
           </button>
         </div>
 
-        {/* Map */}
-        <div style={{ background: 'rgba(8,15,26,0.55)' }}>
+        {/* Map canvas */}
+        <div style={{ background: colors.mapBg }}>
           <MapCanvas zoomable={false} />
         </div>
       </div>
@@ -238,8 +281,8 @@ export default function WorldMap({
                   </div>
                   {city.visits.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
-                      {city.visits.map((v, i) => (
-                        <span key={i} style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{v}</span>
+                      {city.visits.map((v, vi) => (
+                        <span key={vi} style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{v}</span>
                       ))}
                     </div>
                   )}
@@ -276,7 +319,7 @@ export default function WorldMap({
               Close
             </button>
           </div>
-          <div style={{ flex: 1, overflow: 'hidden', background: '#080f1a' }}>
+          <div style={{ flex: 1, overflow: 'hidden', background: colors.fullscreenBg }}>
             <MapCanvas zoomable={true} />
           </div>
           <div style={{ padding: '0.6rem 1.5rem', borderTop: '1px solid var(--border)', fontSize: '0.68rem', color: 'var(--text-muted)', opacity: 0.4, textAlign: 'center' }}>
