@@ -49,6 +49,10 @@ export default function EmailScanPage() {
   }
 
   function startScan() {
+    if (fromDate && toDate && fromDate > toDate) {
+      setScanError('"From" date cannot be after "To" date.')
+      return
+    }
     setScanning(true)
     setSteps([])
     setCurrentStep('')
@@ -200,11 +204,31 @@ export default function EmailScanPage() {
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 130 }}>
                 <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.35rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>From</label>
-                <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="input" />
+                <input
+                  type="date"
+                  value={fromDate}
+                  max={toDate || undefined}
+                  onChange={e => {
+                    const v = e.target.value
+                    setFromDate(v)
+                    if (toDate && v > toDate) setToDate(v)
+                  }}
+                  className="input"
+                />
               </div>
               <div style={{ flex: 1, minWidth: 130 }}>
                 <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.35rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>To</label>
-                <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="input" />
+                <input
+                  type="date"
+                  value={toDate}
+                  min={fromDate || undefined}
+                  onChange={e => {
+                    const v = e.target.value
+                    setToDate(v)
+                    if (fromDate && v < fromDate) setFromDate(v)
+                  }}
+                  className="input"
+                />
               </div>
             </div>
 
