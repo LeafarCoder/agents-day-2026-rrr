@@ -1,0 +1,48 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- White background (works on Google consent screen) -->
+  <rect width="512" height="512" rx="108" fill="#ffffff"/>
+
+  <!-- Globe outer circle -->
+  <circle cx="256" cy="256" r="195" stroke="#0f1b2d" stroke-width="20" fill="none"/>
+
+  <!-- Equatorial ellipse -->
+  <ellipse cx="256" cy="256" rx="195" ry="72" stroke="#0f1b2d" stroke-width="10" fill="none" opacity="0.25"/>
+
+  <!-- Upper and lower latitude arcs -->
+  <path d="M 106 185 Q 256 148 406 185" stroke="#0f1b2d" stroke-width="8" fill="none" opacity="0.18"/>
+  <path d="M 106 327 Q 256 364 406 327" stroke="#0f1b2d" stroke-width="8" fill="none" opacity="0.18"/>
+
+  <!-- DNA helix as the central meridian -->
+
+  <!-- Back strand (low opacity) -->
+  <path d="M 296 62
+           C 296 110 216 110 216 158
+           C 216 206 296 206 296 256
+           C 296 306 216 306 216 354
+           C 216 402 296 402 296 450"
+        stroke="#00d4aa" stroke-width="18" fill="none" stroke-linecap="round" opacity="0.3"/>
+
+  <!-- Rungs -->
+  <line x1="216" y1="158" x2="296" y2="158" stroke="#00d4aa" stroke-width="9" stroke-linecap="round" opacity="0.55"/>
+  <line x1="216" y1="256" x2="296" y2="256" stroke="#00d4aa" stroke-width="9" stroke-linecap="round" opacity="0.55"/>
+  <line x1="216" y1="354" x2="296" y2="354" stroke="#00d4aa" stroke-width="9" stroke-linecap="round" opacity="0.55"/>
+
+  <!-- Rung node dots -->
+  <circle cx="216" cy="158" r="11" fill="#00d4aa" opacity="0.75"/>
+  <circle cx="296" cy="158" r="11" fill="#00d4aa" opacity="0.75"/>
+  <circle cx="216" cy="256" r="11" fill="#00d4aa" opacity="0.75"/>
+  <circle cx="296" cy="256" r="11" fill="#00d4aa" opacity="0.75"/>
+  <circle cx="216" cy="354" r="11" fill="#00d4aa" opacity="0.75"/>
+  <circle cx="296" cy="354" r="11" fill="#00d4aa" opacity="0.75"/>
+
+  <!-- Front strand -->
+  <path d="M 216 62
+           C 216 110 296 110 296 158
+           C 296 206 216 206 216 256
+           C 216 306 296 306 296 354
+           C 296 402 216 402 216 450"
+        stroke="#00d4aa" stroke-width="18" fill="none" stroke-linecap="round"/>
+
+  <!-- Small plane at top (pointing upward) -->
+  <path d="M 256 42 L 244 68 L 256 60 L 268 68 Z" fill="#00d4aa"/>
+</svg>

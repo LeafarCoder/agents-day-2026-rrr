@@ -1,0 +1,40 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Cream/warm light background -->
+  <rect width="512" height="512" rx="108" fill="#faf6f0"/>
+
+  <!-- Two flight-path arcs crossing to form a DNA-like double arc -->
+
+  <!-- Arc 1: top-left → bottom-right, arcing upward (navy) -->
+  <path d="M 78 400 C 78 180 434 180 434 400"
+        stroke="#0f1b2d" stroke-width="22" fill="none" stroke-linecap="round"/>
+
+  <!-- Arc 2: same endpoints but arcing higher (teal) -->
+  <path d="M 78 400 C 78 100 434 100 434 400"
+        stroke="#00d4aa" stroke-width="22" fill="none" stroke-linecap="round"/>
+
+  <!-- Connecting "rungs" between the two arcs at three points -->
+  <!-- Left rung (x≈142) -->
+  <line x1="142" y1="286" x2="142" y2="232" stroke="#0f1b2d" stroke-width="9" stroke-linecap="round" opacity="0.45"/>
+  <!-- Center rung (x≈256, arc peaks) -->
+  <line x1="256" y1="183" x2="256" y2="103" stroke="#0f1b2d" stroke-width="9" stroke-linecap="round" opacity="0.45"/>
+  <!-- Right rung (x≈370) -->
+  <line x1="370" y1="286" x2="370" y2="232" stroke="#0f1b2d" stroke-width="9" stroke-linecap="round" opacity="0.45"/>
+
+  <!-- Node dots on arc 1 -->
+  <circle cx="142" cy="286" r="12" fill="#0f1b2d"/>
+  <circle cx="256" cy="183" r="12" fill="#0f1b2d"/>
+  <circle cx="370" cy="286" r="12" fill="#0f1b2d"/>
+
+  <!-- Node dots on arc 2 -->
+  <circle cx="142" cy="232" r="12" fill="#00d4aa"/>
+  <circle cx="256" cy="103" r="12" fill="#00d4aa"/>
+  <circle cx="370" cy="232" r="12" fill="#00d4aa"/>
+
+  <!-- Small plane shapes at the shared endpoints -->
+  <!-- Left endpoint -->
+  <circle cx="78" cy="400" r="18" fill="#0f1b2d"/>
+  <circle cx="78" cy="400" r="10" fill="#faf6f0"/>
+  <!-- Right endpoint -->
+  <circle cx="434" cy="400" r="18" fill="#00d4aa"/>
+  <circle cx="434" cy="400" r="10" fill="#faf6f0"/>
+</svg>

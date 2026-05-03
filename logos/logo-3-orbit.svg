@@ -1,0 +1,39 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Dark navy background -->
+  <rect width="512" height="512" rx="108" fill="#080f1a"/>
+
+  <!-- Tilted orbital ellipse (suggests globe tilt) -->
+  <ellipse cx="256" cy="256" rx="185" ry="70"
+           stroke="#162539" stroke-width="3" fill="none"
+           transform="rotate(-28 256 256)"/>
+
+  <!-- Main circular orbit ring -->
+  <circle cx="256" cy="256" r="168" stroke="#162539" stroke-width="2.5" fill="none" stroke-dasharray="10 10"/>
+
+  <!-- Destination dots on orbit ring (like airport stops) -->
+  <!-- Top -->
+  <circle cx="256" cy="88"  r="9" fill="#00d4aa"/>
+  <!-- Right -->
+  <circle cx="424" cy="256" r="9" fill="#00d4aa"/>
+  <!-- Bottom -->
+  <circle cx="256" cy="424" r="9" fill="#00d4aa"/>
+  <!-- Left -->
+  <circle cx="88"  cy="256" r="9" fill="#00d4aa"/>
+  <!-- Diagonals (smaller, secondary destinations) -->
+  <circle cx="375" cy="137" r="6" fill="#33ddb8" opacity="0.6"/>
+  <circle cx="375" cy="375" r="6" fill="#33ddb8" opacity="0.6"/>
+  <circle cx="137" cy="375" r="6" fill="#33ddb8" opacity="0.6"/>
+  <circle cx="137" cy="137" r="6" fill="#33ddb8" opacity="0.6"/>
+
+  <!-- Central 4-pointed star (✦) -->
+  <!-- Outer spike tips at radius 92, inner notch at radius 36, angled 45° -->
+  <path d="
+    M 256 164
+    L 269 228 L 348 256 L 269 284 L 256 348
+    L 243 284 L 164 256 L 243 228 Z"
+        fill="#00d4aa"/>
+
+  <!-- Inner glow circle -->
+  <circle cx="256" cy="256" r="28" fill="#080f1a"/>
+  <circle cx="256" cy="256" r="18" fill="#00d4aa" opacity="0.9"/>
+</svg>

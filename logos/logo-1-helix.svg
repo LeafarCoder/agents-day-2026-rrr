@@ -1,0 +1,39 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Dark navy rounded square background -->
+  <rect width="512" height="512" rx="108" fill="#080f1a"/>
+
+  <!-- Back strand (muted teal, behind) -->
+  <path d="M 337 68
+           C 337 116 175 116 175 164
+           C 175 212 337 212 337 260
+           C 337 308 175 308 175 356
+           C 175 404 337 404 337 444"
+        stroke="#0d3d30" stroke-width="28" fill="none" stroke-linecap="round"/>
+
+  <!-- Rungs (base pairs) -->
+  <line x1="175" y1="164" x2="337" y2="164" stroke="#00d4aa" stroke-width="10" stroke-linecap="round" opacity="0.5"/>
+  <line x1="175" y1="260" x2="337" y2="260" stroke="#00d4aa" stroke-width="10" stroke-linecap="round" opacity="0.5"/>
+  <line x1="175" y1="356" x2="337" y2="356" stroke="#00d4aa" stroke-width="10" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- Node dots at rung endpoints -->
+  <circle cx="175" cy="164" r="14" fill="#00d4aa" opacity="0.8"/>
+  <circle cx="337" cy="164" r="14" fill="#00d4aa" opacity="0.8"/>
+  <circle cx="175" cy="260" r="14" fill="#00d4aa" opacity="0.8"/>
+  <circle cx="337" cy="260" r="14" fill="#00d4aa" opacity="0.8"/>
+  <circle cx="175" cy="356" r="14" fill="#00d4aa" opacity="0.8"/>
+  <circle cx="337" cy="356" r="14" fill="#00d4aa" opacity="0.8"/>
+
+  <!-- Front strand (bright teal, on top) -->
+  <path d="M 175 68
+           C 175 116 337 116 337 164
+           C 337 212 175 212 175 260
+           C 175 308 337 308 337 356
+           C 337 404 175 404 175 444"
+        stroke="#00d4aa" stroke-width="28" fill="none" stroke-linecap="round"/>
+
+  <!-- Endpoint dots -->
+  <circle cx="175" cy="68"  r="16" fill="#00d4aa"/>
+  <circle cx="337" cy="68"  r="16" fill="#00d4aa" opacity="0.35"/>
+  <circle cx="175" cy="444" r="16" fill="#00d4aa"/>
+  <circle cx="337" cy="444" r="16" fill="#00d4aa" opacity="0.35"/>
+</svg>
