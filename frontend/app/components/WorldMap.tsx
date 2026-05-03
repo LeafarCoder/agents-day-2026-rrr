@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from '@vnedyalk0v/react19-simple-maps'
 import worldTopology from '../../public/world-110m.json'
 
@@ -66,6 +66,29 @@ const LIGHT_COLORS = {
   visitedHover:   'rgba(0,160,130,0.55)',
   visitedHoverStroke: 'rgba(0,140,115,0.90)',
   visitedPressed: 'rgba(0,140,115,0.70)',
+}
+
+function MapCanvas({
+  zoomable,
+  renderGeos,
+}: {
+  zoomable: boolean
+  renderGeos: (args: { geographies: any[] }) => React.ReactNode
+}) {
+  return (
+    <ComposableMap
+      projectionConfig={{ scale: 147 }}
+      style={{ width: '100%', height: zoomable ? '100%' : 'auto', display: 'block' }}
+    >
+      {zoomable ? (
+        <ZoomableGroup>
+          <Geographies geography={worldTopology}>{renderGeos}</Geographies>
+        </ZoomableGroup>
+      ) : (
+        <Geographies geography={worldTopology}>{renderGeos}</Geographies>
+      )}
+    </ComposableMap>
+  )
 }
 
 export default function WorldMap({
@@ -139,23 +162,6 @@ export default function WorldMap({
     [visitedMap, colors]
   )
 
-  function MapCanvas({ zoomable }: { zoomable: boolean }) {
-    return (
-      <ComposableMap
-        projectionConfig={{ scale: 147 }}
-        style={{ width: '100%', height: zoomable ? '100%' : 'auto', display: 'block' }}
-      >
-        {zoomable ? (
-          <ZoomableGroup>
-            <Geographies geography={worldTopology}>{renderGeos}</Geographies>
-          </ZoomableGroup>
-        ) : (
-          <Geographies geography={worldTopology}>{renderGeos}</Geographies>
-        )}
-      </ComposableMap>
-    )
-  }
-
   return (
     <>
       {/* ── Map card ─────────────────────────────────────────────── */}
@@ -200,7 +206,7 @@ export default function WorldMap({
 
         {/* Map canvas */}
         <div style={{ background: colors.mapBg }}>
-          <MapCanvas zoomable={false} />
+          <MapCanvas zoomable={false} renderGeos={renderGeos} />
         </div>
       </div>
 
@@ -320,7 +326,7 @@ export default function WorldMap({
             </button>
           </div>
           <div style={{ flex: 1, overflow: 'hidden', background: colors.fullscreenBg }}>
-            <MapCanvas zoomable={true} />
+            <MapCanvas zoomable={true} renderGeos={renderGeos} />
           </div>
           <div style={{ padding: '0.6rem 1.5rem', borderTop: '1px solid var(--border)', fontSize: '0.68rem', color: 'var(--text-muted)', opacity: 0.4, textAlign: 'center' }}>
             Scroll to zoom · Drag to pan · Click a country to explore
