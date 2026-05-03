@@ -93,6 +93,14 @@ export default function AccountPage() {
   const [saved, setSaved] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
+  // OpenRouter key state
+  const [hasKey, setHasKey] = useState(false)
+  const [keyInput, setKeyInput] = useState('')
+  const [keySaving, setKeySaving] = useState(false)
+  const [keySaved, setKeySaved] = useState(false)
+  const [keyError, setKeyError] = useState<string | null>(null)
+  const [keyRemoving, setKeyRemoving] = useState(false)
+
   // Delete state
   const [deleting, setDeleting] = useState(false)
 
@@ -110,6 +118,7 @@ export default function AccountPage() {
           const match = COUNTRIES.find(c => c.name === d.home_country)
           if (match) setHomeCountryCode(match.code)
         }
+        setHasKey(d.has_openrouter_key ?? false)
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -164,6 +173,60 @@ export default function AccountPage() {
       setSaveError('Could not reach the server.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function saveKey() {
+    const trimmed = keyInput.trim()
+    if (!trimmed) return
+    setKeySaving(true)
+    setKeyError(null)
+    try {
+      const r = await fetch(`${API_URL}/api/settings/openrouter-key`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ key: trimmed }),
+      })
+      if (!r.ok) {
+        const text = await r.text()
+        let msg = `Server error (${r.status})`
+        try { const d = JSON.parse(text); msg = d.detail ?? d.error ?? msg } catch {}
+        setKeyError(msg)
+      } else {
+        setHasKey(true)
+        setKeyInput('')
+        setKeySaved(true)
+        setTimeout(() => setKeySaved(false), 2500)
+      }
+    } catch {
+      setKeyError('Could not reach the server.')
+    } finally {
+      setKeySaving(false)
+    }
+  }
+
+  async function removeKey() {
+    setKeyRemoving(true)
+    setKeyError(null)
+    try {
+      const r = await fetch(`${API_URL}/api/settings/openrouter-key`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      if (!r.ok) {
+        const text = await r.text()
+        let msg = `Server error (${r.status})`
+        try { const d = JSON.parse(text); msg = d.detail ?? d.error ?? msg } catch {}
+        setKeyError(msg)
+      } else {
+        setHasKey(false)
+        setKeyInput('')
+      }
+    } catch {
+      setKeyError('Could not reach the server.')
+    } finally {
+      setKeyRemoving(false)
     }
   }
 
@@ -378,8 +441,86 @@ export default function AccountPage() {
         )}
       </div>
 
+      {/* OpenRouter API key card */}
+      {!isDemo && (
+        <div className="fade-up d-300 glass-subtle" style={{ borderRadius: 'var(--radius-xl)', padding: '1.5rem', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '0 0 0.6rem' }}>
+            OpenRouter API Key
+          </h2>
+          <p style={{ fontSize: '0.83rem', color: 'var(--text-muted)', margin: '0 0 1rem', lineHeight: 1.55 }}>
+            Used to parse your travel emails with AI. You pay only for what you use —&nbsp;
+            <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-accent)', textDecoration: 'none' }}
+              onMouseEnter={e => ((e.target as HTMLElement).style.textDecoration = 'underline')}
+              onMouseLeave={e => ((e.target as HTMLElement).style.textDecoration = 'none')}>
+              get a key at openrouter.ai →
+            </a>
+          </p>
+
+          {hasKey && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              fontSize: '0.82rem', color: 'var(--text-accent)',
+              marginBottom: '1rem',
+            }}>
+              <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: 'var(--text-accent)', flexShrink: 0 }} />
+              API key configured
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            <input
+              type="password"
+              className="input"
+              placeholder={hasKey ? 'sk-or-v1-… (replace current key)' : 'sk-or-v1-…'}
+              value={keyInput}
+              onChange={e => setKeyInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') saveKey() }}
+              style={{ fontSize: '0.85rem', flex: '1 1 200px', minWidth: 0 }}
+            />
+            <button
+              onClick={saveKey}
+              disabled={!keyInput.trim() || keySaving}
+              className="btn btn-primary"
+              style={{ fontSize: '0.82rem', whiteSpace: 'nowrap', flexShrink: 0 }}
+            >
+              {keySaving ? 'Saving…' : hasKey ? 'Update key' : 'Save key'}
+            </button>
+            {hasKey && (
+              <button
+                onClick={removeKey}
+                disabled={keyRemoving}
+                style={{
+                  padding: '0.45rem 0.85rem',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid rgba(248,113,113,0.4)',
+                  background: 'transparent',
+                  color: '#f87171',
+                  fontSize: '0.82rem',
+                  fontWeight: 500,
+                  cursor: keyRemoving ? 'not-allowed' : 'pointer',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  opacity: keyRemoving ? 0.6 : 1,
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(248,113,113,0.08)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+              >
+                {keyRemoving ? 'Removing…' : 'Remove'}
+              </button>
+            )}
+          </div>
+
+          {keySaved && (
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-accent)', margin: '0.5rem 0 0' }}>Key saved ✓</p>
+          )}
+          {keyError && (
+            <p style={{ fontSize: '0.8rem', color: '#f87171', margin: '0.5rem 0 0' }}>{keyError}</p>
+          )}
+        </div>
+      )}
+
       {/* Activity categories card */}
-      <div className="fade-up d-300 glass-subtle" style={{ borderRadius: 'var(--radius-xl)', padding: '1.5rem', marginBottom: '1rem' }}>
+      <div className="fade-up d-400 glass-subtle" style={{ borderRadius: 'var(--radius-xl)', padding: '1.5rem', marginBottom: '1rem' }}>
         <h2 style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '0 0 0.6rem' }}>
           Activity Categories
         </h2>
@@ -405,7 +546,7 @@ export default function AccountPage() {
       </div>
 
       {/* Session card */}
-      <div className="fade-up d-400 glass-subtle" style={{ borderRadius: 'var(--radius-xl)', padding: '1.5rem', marginBottom: '1rem' }}>
+      <div className="fade-up d-500 glass-subtle" style={{ borderRadius: 'var(--radius-xl)', padding: '1.5rem', marginBottom: '1rem' }}>
         <h2 style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '0 0 1rem' }}>
           Session
         </h2>
@@ -425,7 +566,7 @@ export default function AccountPage() {
 
       {/* Danger zone */}
       {!isDemo && (
-        <div className="fade-up d-500" style={{
+        <div className="fade-up d-600" style={{
           borderRadius: 'var(--radius-xl)',
           padding: '1.5rem',
           marginBottom: '1rem',

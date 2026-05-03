@@ -25,14 +25,16 @@ export default function OpenRouterKeyModal({ onSaved, onDismiss }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key: trimmed }),
       })
-      const data = await res.json()
       if (!res.ok) {
-        setError(data.detail ?? data.error ?? 'Something went wrong.')
-      } else {
-        onSaved()
+        const text = await res.text()
+        let msg = `Server error (${res.status})`
+        try { const d = JSON.parse(text); msg = d.detail ?? d.error ?? msg } catch {}
+        setError(msg)
+        return
       }
+      onSaved()
     } catch {
-      setError('Could not reach the server. Please try again.')
+      setError('Could not connect to the API. Make sure the server is running.')
     } finally {
       setSaving(false)
     }
