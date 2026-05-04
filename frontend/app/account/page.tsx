@@ -51,7 +51,11 @@ export default function AccountPage() {
   const [labelsSaving, setLabelsSaving] = useState(false)
   const [labelsSaved, setLabelsSaved] = useState(false)
   const [labelsError, setLabelsError] = useState<string | null>(null)
-  const [labelsModified, setLabelsModified] = useState(false)
+  // Saved baseline — used to compute dirty state
+  const [savedExcludeFilters, setSavedExcludeFilters] = useState<Record<string, boolean>>({
+    promotions: true, spam: true, social: true, forums: true,
+  })
+  const [savedCustomLabels, setSavedCustomLabels] = useState<string[]>([])
 
   // Delete state
   const [deleting, setDeleting] = useState(false)
@@ -76,13 +80,17 @@ export default function AccountPage() {
 
         const stored: string[] = d.excluded_gmail_labels ?? ['promotions', 'spam', 'social', 'forums']
         const standard = new Set(['promotions', 'spam', 'social', 'forums'])
-        setExcludeFilters({
+        const loadedFilters = {
           promotions: stored.includes('promotions'),
           spam:       stored.includes('spam'),
           social:     stored.includes('social'),
           forums:     stored.includes('forums'),
-        })
-        setCustomLabels(stored.filter(l => !standard.has(l)))
+        }
+        const loadedCustom = stored.filter(l => !standard.has(l))
+        setExcludeFilters(loadedFilters)
+        setSavedExcludeFilters(loadedFilters)
+        setCustomLabels(loadedCustom)
+        setSavedCustomLabels(loadedCustom)
 
         setLoading(false)
       })
@@ -133,7 +141,8 @@ export default function AccountPage() {
         setLabelsError(d.detail ?? `Error ${r.status}`)
       } else {
         setLabelsSaved(true)
-        setLabelsModified(false)
+        setSavedExcludeFilters({ ...excludeFilters })
+        setSavedCustomLabels([...customLabels])
         setTimeout(() => setLabelsSaved(false), 2500)
       }
     } catch {
@@ -267,6 +276,10 @@ export default function AccountPage() {
   }
 
   const isReadOnly = isDemo
+
+  const labelsModified =
+    STANDARD_LABELS.some(k => excludeFilters[k] !== savedExcludeFilters[k]) ||
+    [...customLabels].sort().join('\0') !== [...savedCustomLabels].sort().join('\0')
 
   return (
     <div style={{ padding: '88px 1.5rem 4rem', maxWidth: 560, margin: '0 auto' }}>
@@ -681,7 +694,7 @@ export default function AccountPage() {
                   type="checkbox"
                   className="trip-checkbox"
                   checked={!!excludeFilters[key]}
-                  onChange={e => { setExcludeFilters(f => ({ ...f, [key]: e.target.checked })); setLabelsModified(true) }}
+                  onChange={e => setExcludeFilters(f => ({ ...f, [key]: e.target.checked }))}
                 />
                 {key.charAt(0).toUpperCase() + key.slice(1)}
               </label>
@@ -705,7 +718,7 @@ export default function AccountPage() {
                 >
                   {lbl}
                   <button
-                    onClick={() => { setCustomLabels(prev => prev.filter((_, idx) => idx !== i)); setLabelsModified(true) }}
+                    onClick={() => setCustomLabels(prev => prev.filter((_, idx) => idx !== i))}
                     aria-label={`Remove ${lbl}`}
                     style={{
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -738,7 +751,6 @@ export default function AccountPage() {
                   if (t && !customLabels.includes(t) && !STANDARD_LABELS.includes(t as typeof STANDARD_LABELS[number])) {
                     setCustomLabels(prev => [...prev, t])
                     setNewLabelInput('')
-                    setLabelsModified(true)
                   }
                 }
               }}
@@ -752,7 +764,6 @@ export default function AccountPage() {
                 if (t && !customLabels.includes(t) && !STANDARD_LABELS.includes(t as typeof STANDARD_LABELS[number])) {
                   setCustomLabels(prev => [...prev, t])
                   setNewLabelInput('')
-                  setLabelsModified(true)
                 }
               }}
             >
