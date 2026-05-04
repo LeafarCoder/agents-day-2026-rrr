@@ -7,6 +7,7 @@ from collections import Counter
 from datetime import datetime, timezone
 
 from db.client import get
+from detection.config import _DEFAULT_ACTIVITY_SIGNALS
 from gmail import parser
 
 
@@ -92,7 +93,7 @@ def main() -> None:
         text = " ".join(
             filter(None, [message.get("subject"), message.get("snippet"), message.get("body_text")])
         )
-        categories = parser.detect_activities(text)
+        categories = parser.detect_activities(text, _DEFAULT_ACTIVITY_SIGNALS)
         category_counts.update(categories)
         evidence_subjects.append(message.get("subject"))
 

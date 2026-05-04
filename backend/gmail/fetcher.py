@@ -26,7 +26,7 @@ def build_query(since: date, until: date, exclude: list[str] | None = None) -> s
     exclude_clauses  = " ".join(
         _EXCLUDE_CLAUSES.get(k, f"-label:{k}") for k in (exclude or [])
     )
-    query = f"(({domain_clauses}) OR ({subject_clauses}))"
+    query = f"-in:sent -in:drafts -in:chats (({domain_clauses}) OR ({subject_clauses}))"
     if exclude_clauses:
         query += f" {exclude_clauses}"
     return (
@@ -44,7 +44,8 @@ def fetch_messages(service, since: date, until: date, exclude: list[str] | None 
 
     log.info(
         f"Gmail query  since={since}  until={until}  "
-        f"domains={len(TRAVEL_DOMAINS)}  keywords={len(SUBJECT_KEYWORDS)}"
+        f"domains={len(TRAVEL_DOMAINS)}  keywords={len(SUBJECT_KEYWORDS)}  "
+        f"exclude={exclude or []}  q={query!r}"
     )
 
     while max_results <= 0 or len(messages) < max_results:

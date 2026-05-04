@@ -1,0 +1,13 @@
+# Blocked sender domains — emails from these are skipped before the LLM call,
+# even if their subject matches travel confirmation patterns (e.g. "receipt").
+# One domain per line. Subdomains are matched automatically.
+# Lines starting with # and blank lines are ignored.
+
+# AI / software subscriptions
+anthropic.com
+openrouter.ai
+
+# Google non-travel receipts
+accounts.google.com
+pay.google.com
+payments.google.com

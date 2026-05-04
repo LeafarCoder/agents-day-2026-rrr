@@ -1,170 +1,85 @@
 from __future__ import annotations
 
-import json
 import os
 import re
+from pathlib import Path
 
 LOOKBACK_DAYS = int(os.environ.get("LOOKBACK_DAYS", "730"))
 
-TRAVEL_DOMAINS = {
-    # Global / cross-region
-    "airbnb.com",
-    "booking.com",
-    "eventbrite.com",
-    "feverup.com",
-    "getyourguide.com",
-    "klook.com",
-    "omio.com",
-    "ticketmaster.com",
-    "trainline.com",
-    "todaytix.com",
-    "12go.asia",
-    "viator.com",
+_HERE = Path(__file__).parent
 
-    # Europe / flights / rail
-    "airfrance.com",
-    "bahn.de",
-    "easyjet.com",
-    "edreams.com",
-    "eurostar.com",
-    "flixbus.com",
-    "flytap.com",
-    "lastminute.com",
-    "norwegian.com",
-    "opodo.com",
-    "ouigo.com",
-    "renfe.com",
-    "ryanair.com",
-    "sncf-connect.com",
-    "sncf.fr",
-    "transavia.com",
-    "trenitalia.com",
-    "vueling.com",
-    "wizzair.com",
 
-    # APAC / Australia
-    "airasia.com",
-    "jetstar.com",
-    "qantas.com",
-    "singaporeair.com",
-    "virginaustralia.com",
+def _load_domain_file(filename: str) -> frozenset[str]:
+    path = _HERE / filename
+    domains: set[str] = set()
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#"):
+            domains.add(line.lower())
+    return frozenset(domains)
 
-    # Hotels / OTAs / attractions
-    "accorhotels.com",
-    "agoda.com",
-    "expedia.com",
-    "hilton.com",
-    "hostelworld.com",
-    "hotels.com",
-    "jewelchangiairport.com",
-    "kayak.com",
-    "kiwi.com",
-    "marriott.com",
-    "tripadvisor.com",
-    "vrbo.com",
-    "withlocals.com",
 
-    # Activity/ticket operators seen in demo account
-    "oceanario.pt",
-    "ticketline.pt",
-    "velanotejo.pt",
-    "surfslisbon.com",
-    "skyscanner.net",
-}
+TRAVEL_DOMAINS  = _load_domain_file("domains_allowed.txt")
+BLOCKED_DOMAINS = _load_domain_file("domains_blocked.txt")
 
+# Seed template used when seeding a new user's vocabulary (db/writer.py:seed_user_keywords)
+# and as a fallback when the DB is unreachable. Not used for live signal lookups — those
+# go through db/reader.py:get_user_keywords so every user has their own copy.
 _DEFAULT_ACTIVITY_SIGNALS: dict[str, list[str]] = {
     "food_dining": [
-        "food tour", "cooking class", "restaurant", "dinner",
-        "tasting", "wine tour", "culinary", "food experience",
+        "food tour", "cooking class", "tasting", "wine tour", "culinary", "food experience",
+        "michelin", "fine dining", "street food", "food market", "chef's table",
+        "tasting menu", "brunch", "farm to table", "food hall", "pop-up dinner",
     ],
     "culture_history": [
-        "museum", "historical", "walking tour", "heritage",
-        "architecture", "art tour", "cultural", "old town",
+        "museum", "heritage", "architecture", "art tour", "old town",
+        "historical walking tour", "gallery", "monument", "palace", "castle",
+        "ruins", "cathedral", "archaeological site", "unesco",
     ],
     "adventure_outdoor": [
-        "hiking", "trekking", "kayak", "surf", "scuba",
-        "climbing", "safari", "zip line", "rafting", "cycling tour",
+        "hiking", "trekking", "kayak", "surf", "scuba", "climbing", "safari",
+        "zip line", "rafting", "cycling tour",
+        "snorkeling", "paragliding", "skydiving", "bungee jump", "sailing",
+        "windsurfing", "kitesurfing", "horseback riding", "atv tour",
+        "mountain bike", "ski", "snowboard", "ice climbing", "canyoning", "via ferrata",
     ],
-    "nightlife": ["nightlife tour", "bar crawl", "pub crawl", "rooftop bar", "cocktail"],
-    "wellness":  ["spa", "yoga retreat", "meditation", "wellness", "massage"],
+    "nightlife": [
+        "bar crawl", "pub crawl", "rooftop bar", "cocktail",
+        "nightclub", "dj set", "live music", "speakeasy", "jazz bar",
+        "wine bar", "karaoke", "late-night",
+    ],
+    "wellness": [
+        "spa", "yoga retreat", "meditation", "massage",
+        "thermal bath", "hot springs", "hammam", "onsen", "sauna",
+        "ayurveda", "silent retreat", "detox", "pilates", "breathwork",
+    ],
     "sightseeing": [
-        "city tour", "sightseeing", "bus tour", "boat tour",
-        "sunset cruise", "day trip", "excursion",
+        "city tour", "bus tour", "boat tour", "sunset cruise", "day trip", "excursion",
+        "viewpoint", "observation deck", "hop on hop off", "free walking tour", "guided tour",
     ],
     "accommodation": [
-        "accommodation airbnb", "airbnb", "vacation rental", "apartment rental",
-        "accommodation hotel", "hotel", "hostel", "resort", "bed and breakfast",
+        "airbnb", "vacation rental", "apartment rental",
+        "hotel", "hostel", "resort", "bed and breakfast",
+        "boutique hotel", "luxury hotel", "budget hotel", "5-star", "4-star",
+        "guesthouse", "villa", "lodge", "glamping", "camping",
+        "capsule hotel", "aparthotel", "dorm room",
     ],
     "transportation": [
-        "flight", "e-ticket", "boarding", "itinerary",
-        "budget flight", "business class", "first class", "economy class",
-        "train", "rail", "eurostar", "bus", "coach",
-        "ferry", "cruise", "car rental", "taxi", "transfer", "shuttle", "tuk-tuk",
+        "flight", "low-cost airline", "business class", "first class", "economy class",
+        "train", "high-speed train", "bus", "coach", "ferry", "cruise",
+        "car rental", "taxi", "tuk-tuk",
+        "ride hailing", "metro", "subway", "tram",
+        "chauffeur", "motorbike rental", "scooter rental", "bike rental", "helicopter",
     ],
     "cuisine": [
         "italian", "japanese", "mexican", "indian", "chinese", "thai",
         "french", "spanish", "portuguese", "greek", "moroccan",
         "vietnamese", "korean", "american", "mediterranean",
+        "peruvian", "lebanese", "turkish", "ethiopian", "brazilian", "argentinian",
+        "vegetarian", "vegan", "plant-based", "seafood",
+        "ramen", "sushi", "pizza", "tapas", "bbq", "fusion",
     ],
 }
-
-_CUSTOM_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "custom_categories.json")
-
-
-def _load_custom() -> dict[str, list[str]]:
-    if os.path.exists(_CUSTOM_FILE):
-        with open(_CUSTOM_FILE) as f:
-            return json.load(f)
-    return {}
-
-
-def _save_custom(data: dict[str, list[str]]) -> None:
-    os.makedirs(os.path.dirname(_CUSTOM_FILE), exist_ok=True)
-    with open(_CUSTOM_FILE, "w") as f:
-        json.dump(data, f, indent=2)
-
-
-def get_merged_signals(user_custom: dict | None = None) -> dict[str, list[str]]:
-    """Merge defaults with per-user custom signals, honoring removed defaults."""
-    custom = user_custom or {}
-    removed = custom.get('__removed__', {})
-    merged: dict[str, list[str]] = {}
-    for cat, kws in _DEFAULT_ACTIVITY_SIGNALS.items():
-        excluded = set(removed.get(cat, []))
-        merged[cat] = [kw for kw in kws if kw not in excluded]
-    for cat, keywords in custom.items():
-        if cat.startswith('__'):
-            continue
-        if cat in merged:
-            for kw in keywords:
-                if kw not in merged[cat]:
-                    merged[cat].append(kw)
-        else:
-            merged[cat] = list(keywords)
-    return merged
-
-
-def get_activity_signals() -> dict[str, list[str]]:
-    return get_merged_signals(_load_custom())
-
-
-def add_category(name: str) -> None:
-    custom = _load_custom()
-    if name not in custom and name not in _DEFAULT_ACTIVITY_SIGNALS:
-        custom[name] = []
-        _save_custom(custom)
-
-
-def add_keyword(category: str, keyword: str) -> None:
-    custom = _load_custom()
-    existing = get_activity_signals()
-    if category not in existing:
-        raise ValueError(f"Category '{category}' does not exist.")
-    bucket = custom.setdefault(category, [])
-    if keyword not in bucket and keyword not in _DEFAULT_ACTIVITY_SIGNALS.get(category, []):
-        bucket.append(keyword)
-        _save_custom(custom)
-
 
 # ---------------------------------------------------------------------------
 # Confirmation subject regex — rebuilt when the module loads

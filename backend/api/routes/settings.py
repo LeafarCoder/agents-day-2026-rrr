@@ -5,7 +5,6 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from gmail.auth import get_current_user_email
 import db.writer as writer
 
 router = APIRouter(prefix="/api/settings")
@@ -22,12 +21,16 @@ class ProfilePayload(BaseModel):
     home_country_code: str | None = None
 
 
+class ExcludedLabelsPayload(BaseModel):
+    labels: list[str]
+
+
 @router.patch("/profile")
 def save_profile(payload: ProfilePayload, request: Request):
     if request.session.get("demo"):
         return JSONResponse({"error": "demo_mode_read_only"}, status_code=403)
 
-    user_email = get_current_user_email(request.session)
+    user_email = request.session.get("user_email")
     if not user_email:
         return JSONResponse({"error": "not_authenticated"}, status_code=401)
 
@@ -41,12 +44,32 @@ def save_profile(payload: ProfilePayload, request: Request):
     return {"ok": True}
 
 
+@router.get("/openrouter-key")
+def get_openrouter_key(request: Request):
+    user_email = request.session.get("user_email")
+    if not user_email:
+        return JSONResponse({"error": "not_authenticated"}, status_code=401)
+
+    try:
+        from db.client import get as get_client
+        from crypto.secrets import decrypt_secret
+        db = get_client()
+        res = db.table("users").select("openrouter_api_key_encrypted").eq("email", user_email).execute()
+        if not res.data or not res.data[0].get("openrouter_api_key_encrypted"):
+            return JSONResponse({"error": "no_key"}, status_code=404)
+        raw = res.data[0]["openrouter_api_key_encrypted"]
+        from crypto.secrets import decrypt_stored_key
+        return {"key": decrypt_stored_key(raw)}
+    except Exception as exc:
+        return JSONResponse({"error": "decrypt_failed", "detail": str(exc)}, status_code=500)
+
+
 @router.post("/openrouter-key")
 def save_openrouter_key(payload: KeyPayload, request: Request):
     if request.session.get("demo"):
         return JSONResponse({"error": "demo_mode_read_only"}, status_code=403)
 
-    user_email = get_current_user_email(request.session)
+    user_email = request.session.get("user_email")
     if not user_email:
         return JSONResponse({"error": "not_authenticated"}, status_code=401)
 
@@ -77,9 +100,59 @@ def delete_openrouter_key(request: Request):
     if request.session.get("demo"):
         return JSONResponse({"error": "demo_mode_read_only"}, status_code=403)
 
-    user_email = get_current_user_email(request.session)
+    user_email = request.session.get("user_email")
     if not user_email:
         return JSONResponse({"error": "not_authenticated"}, status_code=401)
 
     writer.clear_openrouter_key(user_email)
+    return {"ok": True}
+
+
+@router.post("/tour-complete")
+def tour_complete(request: Request):
+    if request.session.get("demo"):
+        return JSONResponse({"error": "demo_mode_read_only"}, status_code=403)
+
+    user_email = request.session.get("user_email")
+    if not user_email:
+        return JSONResponse({"error": "not_authenticated"}, status_code=401)
+
+    writer.set_tour_seen(user_email, seen=True)
+    return {"ok": True}
+
+
+@router.get("/excluded-labels")
+def get_excluded_labels(request: Request):
+    user_email = request.session.get("user_email")
+    if not user_email:
+        return JSONResponse({"error": "not_authenticated"}, status_code=401)
+    from db.client import get as get_client
+    db = get_client()
+    res = db.table("users").select("excluded_gmail_labels").eq("email", user_email).execute()
+    labels = (res.data[0].get("excluded_gmail_labels") or []) if res.data else []
+    return {"labels": labels}
+
+
+@router.put("/excluded-labels")
+def put_excluded_labels(payload: ExcludedLabelsPayload, request: Request):
+    if request.session.get("demo"):
+        return JSONResponse({"error": "demo_mode_read_only"}, status_code=403)
+    user_email = request.session.get("user_email")
+    if not user_email:
+        return JSONResponse({"error": "not_authenticated"}, status_code=401)
+    labels = [lbl.strip() for lbl in payload.labels if lbl.strip()]
+    writer.save_excluded_labels(user_email, labels)
+    return {"ok": True}
+
+
+@router.post("/tour-reset")
+def tour_reset(request: Request):
+    if request.session.get("demo"):
+        return JSONResponse({"error": "demo_mode_read_only"}, status_code=403)
+
+    user_email = request.session.get("user_email")
+    if not user_email:
+        return JSONResponse({"error": "not_authenticated"}, status_code=401)
+
+    writer.set_tour_seen(user_email, seen=False)
     return {"ok": True}

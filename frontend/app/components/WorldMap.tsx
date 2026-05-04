@@ -56,7 +56,7 @@ const DARK_COLORS = {
 }
 
 const LIGHT_COLORS = {
-  mapBg:          '#d8d2c8',
+  mapBg:          '#ede5d8',
   fullscreenBg:   '#f0e6d4',
   unvisited:      'rgba(0,0,0,0.07)',
   unvisitedHover: 'rgba(0,0,0,0.13)',
@@ -223,7 +223,7 @@ export default function WorldMap({
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="glass fade-in"
+            className="glass fade-in modal-card"
             style={{
               borderRadius: 'var(--radius-xl)', padding: '1.75rem',
               width: '100%', maxWidth: 360,
@@ -315,12 +315,18 @@ export default function WorldMap({
             </span>
             <button
               onClick={() => setFullscreen(false)}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', transition: 'color 150ms' }}
+              aria-label="Close fullscreen map"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.35rem',
+                fontSize: '0.72rem', color: 'var(--text-muted)',
+                background: 'none', border: 'none', cursor: 'pointer', transition: 'color 150ms',
+                minWidth: 44, minHeight: 44, justifyContent: 'center', padding: '0.5rem',
+              }}
               onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
               onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
             >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                <path d="M1.5 1.5l9 9M10.5 1.5l-9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
               </svg>
               Close
             </button>

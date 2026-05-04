@@ -52,7 +52,7 @@ export default function OpenRouterKeyModal({ onSaved, onDismiss }: Props) {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '1.5rem',
     }}>
-      <div className="glass fade-in" style={{
+      <div className="glass fade-in modal-card" style={{
         borderRadius: 'var(--radius-xl)',
         padding: '2rem',
         width: '100%', maxWidth: 480,

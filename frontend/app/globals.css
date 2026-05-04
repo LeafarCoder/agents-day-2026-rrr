@@ -96,6 +96,7 @@
   color: var(--text);
 }
 [data-theme="light"] .input[type="date"] { color-scheme: light; }
+[data-theme="light"] .trip-checkbox { color-scheme: light; }
 
 [data-theme="light"] .skeleton {
   background: linear-gradient(90deg,
@@ -217,6 +218,9 @@ body {
 /* Color scheme for date inputs */
 .input[type="date"] { color-scheme: dark; }
 
+/* Checkboxes adapt to current theme */
+.trip-checkbox { color-scheme: dark; accent-color: var(--text-accent); cursor: pointer; }
+
 /* ─── Skeleton shimmer ──────────────────────────────────────────── */
 @keyframes shimmer {
   0%   { background-position: -200% 0; }
@@ -290,4 +294,26 @@ body {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* ─── Mobile responsive helpers ────────────────────────────────── */
+@media (max-width: 640px) {
+  body { font-size: 15px; }
+
+  /* Tighter side padding for page wrappers that opt in */
+  .page-pad { padding: 80px 1rem 3rem !important; }
+
+  /* Modal cards shrink to fit the viewport (overlays use padding: 1.5rem each side) */
+  .modal-card { width: 100% !important; max-width: calc(100vw - 3rem) !important; }
+
+  /* Horizontal-scroll tables */
+  .scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Places visited masonry: 1 column on phones */
+  .visit-grid { columns: 1 !important; }
+}
+
+@media (min-width: 641px) and (max-width: 900px) {
+  /* 2 columns on small tablets */
+  .visit-grid { columns: 2 !important; }
 }

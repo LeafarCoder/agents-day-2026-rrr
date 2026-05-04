@@ -31,6 +31,7 @@ def me(request: Request):
             "connected":          True,
             "demo":               True,
             "has_openrouter_key": False,
+            "has_seen_tour":      True,
             "user_email":         DEMO_USER_EMAIL,
             "display_name":       user_row.get("display_name"),
             "home_city":          user_row.get("home_city"),
@@ -57,17 +58,19 @@ def me(request: Request):
 
     user_row = (profile_data or {}).get("user") or {}
     return {
-        "connected":          connected,
-        "demo":               False,
-        "has_openrouter_key": db_reader.has_openrouter_key(user_email) if user_email else False,
-        "user_email":         user_email,
-        "display_name":       user_row.get("display_name"),
-        "home_city":          user_row.get("home_city"),
-        "home_country":       user_row.get("home_country"),
-        "home_country_code":  user_row.get("home_country_code"),
-        "profile":            profile_data,
-        "default_from":       (today - timedelta(days=365)).isoformat(),
-        "default_to":         today.isoformat(),
+        "connected":              connected,
+        "demo":                   False,
+        "has_openrouter_key":     db_reader.has_openrouter_key(user_email) if user_email else False,
+        "has_seen_tour":          bool(user_row.get("has_seen_tour")),
+        "user_email":             user_email,
+        "display_name":           user_row.get("display_name"),
+        "home_city":              user_row.get("home_city"),
+        "home_country":           user_row.get("home_country"),
+        "home_country_code":      user_row.get("home_country_code"),
+        "excluded_gmail_labels":  user_row.get("excluded_gmail_labels") or ["promotions", "spam", "social", "forums"],
+        "profile":                profile_data,
+        "default_from":           (today - timedelta(days=365)).isoformat(),
+        "default_to":             today.isoformat(),
     }
 
 
@@ -116,6 +119,12 @@ def oauth_callback(request: Request):
     flow.fetch_token(authorization_response=auth_response)
     request.session.clear()  # Removes demo flag and stale OAuth state
     save_credentials_to_session(flow.credentials, request.session)
+    try:
+        service = build("gmail", "v1", credentials=flow.credentials)
+        email = service.users().getProfile(userId="me").execute()["emailAddress"]
+        request.session["user_email"] = email
+    except Exception:
+        pass
     return RedirectResponse(FRONTEND_URL)
 
 

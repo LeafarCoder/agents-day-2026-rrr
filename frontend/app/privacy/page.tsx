@@ -47,7 +47,7 @@ function Table({ rows }: { rows: [string, string, string][] }) {
     borderBottom: '1px solid rgba(255,255,255,0.04)',
   }
   return (
-    <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.07)' }}>
+    <div className="scroll-x" style={{ overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.07)' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
         <thead>
           <tr>

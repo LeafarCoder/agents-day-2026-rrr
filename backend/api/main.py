@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from config import FRONTEND_URL, SECRET_KEY, SESSION_COOKIE_SAMESITE, SESSION_COOKIE_SECURE
-from api.routes import auth, scan, preferences, profile, experiences, demo, settings
+from api.routes import auth, scan, preferences, profile, experiences, demo, settings, trips
 
 app = FastAPI(title="Travel DNA")
 
@@ -29,3 +29,4 @@ app.include_router(profile.router)
 app.include_router(experiences.router)
 app.include_router(demo.router)
 app.include_router(settings.router)
+app.include_router(trips.router)

@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { API_URL } from '@/lib/api'
+import { useIsMobile } from '@/lib/useIsMobile'
 
 type Booking = {
   id: string | null
@@ -40,6 +41,16 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+function getPageNumbers(current: number, total: number): (number | '...')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const pages: (number | '...')[] = [1]
+  if (current > 3) pages.push('...')
+  for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) pages.push(p)
+  if (current < total - 2) pages.push('...')
+  pages.push(total)
+  return pages
+}
+
 function BookingModal({ booking, onClose }: { booking: Booking; onClose: () => void }) {
   const hasTrip = booking.city || booking.country || booking.start_date
   const hasKeywords = Object.keys(booking.keyword_hits ?? {}).length > 0
@@ -57,7 +68,7 @@ function BookingModal({ booking, onClose }: { booking: Booking; onClose: () => v
     >
       <div
         onClick={e => e.stopPropagation()}
-        className="glass fade-in"
+        className="glass fade-in modal-card"
         style={{
           borderRadius: 'var(--radius-xl)',
           padding: '1.75rem',
@@ -179,6 +190,40 @@ function ScanResultsContent() {
   const [error, setError] = useState('')
   const [page, setPage] = useState(1)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
+  const [platformsOpen, setPlatformsOpen] = useState(false)
+  const [platformSearch, setPlatformSearch] = useState('')
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set())
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const isMobile = useIsMobile()
+
+  async function excludeBooking(id: string) {
+    setExcludedIds(prev => new Set(prev).add(id))
+    try {
+      await fetch(`${API_URL}/api/bookings/${encodeURIComponent(id)}/exclude`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+    } catch {
+      // optimistic remove stays
+    }
+  }
+
+  async function bulkExclude() {
+    const ids = [...selectedIds]
+    setSelectedIds(new Set())
+    setExcludedIds(prev => {
+      const next = new Set(prev)
+      ids.forEach(id => next.add(id))
+      return next
+    })
+    await Promise.all(
+      ids.map(id =>
+        fetch(`${API_URL}/api/bookings/${encodeURIComponent(id)}/exclude`, {
+          method: 'POST', credentials: 'include',
+        }).catch(() => {})
+      )
+    )
+  }
 
   useEffect(() => {
     const url = isScanView
@@ -201,7 +246,7 @@ function ScanResultsContent() {
       <div style={{ padding: '88px 1.5rem 4rem', maxWidth: 760, margin: '0 auto' }}>
         <div style={{ height: 28, width: 120, marginBottom: '2rem' }} className="skeleton" />
         <div style={{ height: 48, width: '60%', marginBottom: '0.75rem' }} className="skeleton" />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.75rem', margin: '2rem 0' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', margin: '2rem 0' }}>
           {[...Array(4)].map((_, i) => <div key={i} style={{ height: 80 }} className="skeleton" />)}
         </div>
         <div style={{ height: 300 }} className="skeleton" />
@@ -217,12 +262,17 @@ function ScanResultsContent() {
     )
   }
 
-  const { profile, bookings = [] } = data ?? { profile: null, bookings: [] }
+  const { profile, bookings: allBookings = [] } = data ?? { profile: null, bookings: [] }
   const platforms = profile?.platforms ? Object.entries(profile.platforms) : []
+
+  const bookings = allBookings.filter(b => !b.id || !excludedIds.has(b.id))
 
   const PAGE_SIZE = 25
   const totalPages = Math.max(1, Math.ceil(bookings.length / PAGE_SIZE))
   const pageBookings = bookings.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const pageBookingsWithId = pageBookings.filter(b => b.id != null)
+  const allPageSelected = pageBookingsWithId.length > 0 && pageBookingsWithId.every(b => selectedIds.has(b.id!))
+  const somePageSelected = pageBookingsWithId.some(b => selectedIds.has(b.id!))
 
   /* ── Empty state ──────────────────────────────────────────────── */
   if (!data || bookings.length === 0) {
@@ -242,7 +292,7 @@ function ScanResultsContent() {
               : 'Scan your emails to see booking history here.'}
           </p>
           {isScanView
-            ? <Link href="/scan" className="btn btn-ghost" style={{ fontSize: '0.82rem', marginRight: '0.75rem' }}>View all results</Link>
+            ? <Link href="/results" className="btn btn-ghost" style={{ fontSize: '0.82rem', marginRight: '0.75rem' }}>View all results</Link>
             : null}
           <Link href="/email-scan" className="btn btn-primary">Scan Emails</Link>
         </div>
@@ -258,7 +308,7 @@ function ScanResultsContent() {
       <div className="fade-up" style={{ marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
           {isScanView
-            ? <Link href="/scan" style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            ? <Link href="/results" style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                 ← All results
               </Link>
             : <Link href="/" style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
@@ -309,7 +359,7 @@ function ScanResultsContent() {
             </Link>
             <span style={{ width: 1, height: 14, background: 'var(--border)' }} />
             <Link
-              href="/scan"
+              href="/results"
               style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
               onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
               onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
@@ -335,62 +385,108 @@ function ScanResultsContent() {
         ))}
       </div>
 
-      {/* Platforms */}
-      {platforms.length > 0 && (
-        <div className="fade-up d-200 glass" style={{ borderRadius: 'var(--radius-xl)', padding: '1.25rem 1.5rem', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '0.875rem' }}>
-            Platforms
-          </h2>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {platforms.map(([domain, count]) => (
-              <span key={domain} style={{
-                display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-                padding: '0.3rem 0.75rem',
-                borderRadius: 'var(--radius-md)',
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid var(--border)',
-                fontSize: '0.78rem', color: 'var(--text)',
-              }}>
-                {domain}
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>{count}</span>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Bookings table */}
       <div className="fade-up d-300 glass" style={{ borderRadius: 'var(--radius-xl)', overflow: 'hidden' }}>
-        <div style={{ padding: '1.25rem 1.5rem 0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ padding: '1.25rem 1.5rem 0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
           <h2 style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
-            Confirmations <span style={{ fontWeight: 400, opacity: 0.6 }}>({bookings.length})</span>
+            Emails <span style={{ fontWeight: 400, opacity: 0.6 }}>({bookings.length})</span>
           </h2>
+          {selectedIds.size > 0 && (
+            <button
+              onClick={bulkExclude}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                fontSize: '0.72rem', fontWeight: 500,
+                color: '#f87171',
+                background: 'rgba(248,113,113,0.08)',
+                border: '1px solid rgba(248,113,113,0.25)',
+                borderRadius: 'var(--radius-md)',
+                padding: '0.3rem 0.75rem',
+                cursor: 'pointer',
+                transition: 'background 150ms',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(248,113,113,0.15)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(248,113,113,0.08)')}
+            >
+              <svg width="12" height="12" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                <circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" strokeWidth="1.3"/>
+                <path d="M4 6.5h5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+              Remove from analysis ({selectedIds.size})
+            </button>
+          )}
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
+        <div className="scroll-x" style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                {['Date', 'Platform', 'Destination', 'Subject'].map(h => (
+                <th style={{ padding: '0.6rem 0.75rem 0.6rem 1rem', width: 36, textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={allPageSelected}
+                    ref={el => { if (el) el.indeterminate = !allPageSelected && somePageSelected }}
+                    onChange={() => {
+                      if (allPageSelected) {
+                        setSelectedIds(prev => {
+                          const next = new Set(prev)
+                          pageBookingsWithId.forEach(b => next.delete(b.id!))
+                          return next
+                        })
+                      } else {
+                        setSelectedIds(prev => {
+                          const next = new Set(prev)
+                          pageBookingsWithId.forEach(b => next.add(b.id!))
+                          return next
+                        })
+                      }
+                    }}
+                    style={{ cursor: 'pointer', accentColor: 'var(--text-accent)' }}
+                  />
+                </th>
+                {['Date', 'Destination', 'Subject'].map(h => (
                   <th key={h} style={{ padding: '0.6rem 1rem', textAlign: 'left', fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.07em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                     {h}
                   </th>
                 ))}
+                {!isMobile && (
+                  <th style={{ padding: '0.6rem 1rem', textAlign: 'left', fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.07em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                    Platform
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
               {pageBookings.map((b, i) => (
                 <tr
                   key={i}
-                  onClick={() => setSelectedBooking(b)}
-                  style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'background 150ms', cursor: 'pointer' }}
+                  style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'background 150ms' }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
-                  <td style={{ padding: '0.8rem 1rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{b.date}</td>
-                  <td style={{ padding: '0.8rem 1rem', color: 'var(--text)' }}>{b.domain}</td>
-                  <td style={{ padding: '0.8rem 1rem', color: b.destination ? 'var(--text-accent)' : 'var(--text-muted)' }}>{b.destination ?? '—'}</td>
-                  <td style={{ padding: '0.8rem 1rem', color: 'var(--text-muted)', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.subject}</td>
+                  <td style={{ padding: '0.4rem 0.75rem 0.4rem 1rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                    {b.id && (
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(b.id)}
+                        onChange={() => {
+                          setSelectedIds(prev => {
+                            const next = new Set(prev)
+                            next.has(b.id!) ? next.delete(b.id!) : next.add(b.id!)
+                            return next
+                          })
+                        }}
+                        onClick={e => e.stopPropagation()}
+                        style={{ cursor: 'pointer', accentColor: 'var(--text-accent)' }}
+                      />
+                    )}
+                  </td>
+                  <td onClick={() => setSelectedBooking(b)} style={{ padding: '0.8rem 1rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', cursor: 'pointer' }}>{b.date}</td>
+                  <td onClick={() => setSelectedBooking(b)} style={{ padding: '0.8rem 1rem', color: b.destination ? 'var(--text-accent)' : 'var(--text-muted)', cursor: 'pointer' }}>{b.destination ?? '—'}</td>
+                  <td onClick={() => setSelectedBooking(b)} style={{ padding: '0.8rem 1rem', color: 'var(--text-muted)', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}>{b.subject}</td>
+                  {!isMobile && (
+                    <td onClick={() => setSelectedBooking(b)} style={{ padding: '0.8rem 1rem', color: 'var(--text)', cursor: 'pointer' }}>{b.domain}</td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -398,27 +494,115 @@ function ScanResultsContent() {
         </div>
 
         {totalPages > 1 && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1.5rem', borderTop: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', padding: '0.875rem 1.5rem', borderTop: '1px solid var(--border)', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setPage(1)}
+              disabled={page === 1}
+              title="First page"
+              style={{ fontSize: '0.75rem', color: page === 1 ? 'var(--text-muted)' : 'var(--text-accent)', background: 'none', border: 'none', cursor: page === 1 ? 'default' : 'pointer', opacity: page === 1 ? 0.4 : 1, padding: '0.25rem 0.4rem' }}
+            >
+              «
+            </button>
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
-              style={{ fontSize: '0.78rem', color: page === 1 ? 'var(--text-muted)' : 'var(--text-accent)', background: 'none', border: 'none', cursor: page === 1 ? 'default' : 'pointer', opacity: page === 1 ? 0.4 : 1, padding: '0.25rem 0' }}
+              style={{ fontSize: '0.75rem', color: page === 1 ? 'var(--text-muted)' : 'var(--text-accent)', background: 'none', border: 'none', cursor: page === 1 ? 'default' : 'pointer', opacity: page === 1 ? 0.4 : 1, padding: '0.25rem 0.4rem' }}
             >
-              ← Prev
+              ‹
             </button>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>
-              {page} / {totalPages}
-            </span>
+            {getPageNumbers(page, totalPages).map((p, i) =>
+              p === '...'
+                ? <span key={`ellipsis-${i}`} style={{ fontSize: '0.75rem', color: 'var(--text-muted)', padding: '0.25rem 0.2rem' }}>…</span>
+                : <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    style={{
+                      fontSize: '0.75rem',
+                      fontWeight: p === page ? 600 : 400,
+                      color: p === page ? 'var(--text)' : 'var(--text-muted)',
+                      background: p === page ? 'rgba(255,255,255,0.08)' : 'none',
+                      border: p === page ? '1px solid var(--border)' : 'none',
+                      borderRadius: 'var(--radius-sm)',
+                      cursor: p === page ? 'default' : 'pointer',
+                      padding: '0.2rem 0.5rem',
+                      minWidth: 28,
+                    }}
+                  >
+                    {p}
+                  </button>
+            )}
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              style={{ fontSize: '0.78rem', color: page === totalPages ? 'var(--text-muted)' : 'var(--text-accent)', background: 'none', border: 'none', cursor: page === totalPages ? 'default' : 'pointer', opacity: page === totalPages ? 0.4 : 1, padding: '0.25rem 0' }}
+              style={{ fontSize: '0.75rem', color: page === totalPages ? 'var(--text-muted)' : 'var(--text-accent)', background: 'none', border: 'none', cursor: page === totalPages ? 'default' : 'pointer', opacity: page === totalPages ? 0.4 : 1, padding: '0.25rem 0.4rem' }}
             >
-              Next →
+              ›
+            </button>
+            <button
+              onClick={() => setPage(totalPages)}
+              disabled={page === totalPages}
+              title="Last page"
+              style={{ fontSize: '0.75rem', color: page === totalPages ? 'var(--text-muted)' : 'var(--text-accent)', background: 'none', border: 'none', cursor: page === totalPages ? 'default' : 'pointer', opacity: page === totalPages ? 0.4 : 1, padding: '0.25rem 0.4rem' }}
+            >
+              »
             </button>
           </div>
         )}
       </div>
+
+      {/* Platforms */}
+      {platforms.length > 0 && (
+        <div className="fade-up glass" style={{ borderRadius: 'var(--radius-xl)', padding: '1.25rem 1.5rem', marginTop: '1.5rem' }}>
+          <div
+            onClick={() => setPlatformsOpen(o => !o)}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', userSelect: 'none' }}
+          >
+            <h2 style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
+              Platforms <span style={{ fontWeight: 400, opacity: 0.6 }}>({platforms.length})</span>
+            </h2>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', transition: 'transform 150ms', display: 'inline-block', transform: platformsOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+          </div>
+          {platformsOpen && (
+            <div style={{ marginTop: '0.875rem' }}>
+              <input
+                type="text"
+                placeholder="Filter platforms…"
+                value={platformSearch}
+                onChange={e => setPlatformSearch(e.target.value)}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  padding: '0.4rem 0.75rem',
+                  marginBottom: '0.75rem',
+                  fontSize: '0.78rem',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-md)',
+                  color: 'var(--text)',
+                  outline: 'none',
+                }}
+              />
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', maxHeight: 180, overflowY: 'auto' }}>
+                {platforms
+                  .filter(([domain]) => domain.toLowerCase().includes(platformSearch.toLowerCase()))
+                  .map(([domain, count]) => (
+                    <span key={domain} style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                      padding: '0.3rem 0.75rem',
+                      borderRadius: 'var(--radius-md)',
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid var(--border)',
+                      fontSize: '0.78rem', color: 'var(--text)',
+                      flexShrink: 0,
+                    }}>
+                      {domain}
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>{count}</span>
+                    </span>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {selectedBooking && (
         <BookingModal booking={selectedBooking} onClose={() => setSelectedBooking(null)} />

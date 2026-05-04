@@ -261,7 +261,7 @@ export default function CategoriesPage() {
             <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>No categories yet. Add one to get started.</p>
           </div>
         ) : (
-          <div style={{ columns: '4 220px', columnGap: '0.875rem' }}>
+          <div className="visit-grid" style={{ columns: '4 220px', columnGap: '0.875rem' }}>
             {categories.map((category, i) => {
               const isDefault = defaults.includes(category)
               const isAddingHere = addingTo === category

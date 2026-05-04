@@ -3,74 +3,9 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { API_URL } from '@/lib/api'
-
-const COUNTRIES: { code: string; name: string }[] = [
-  { code: 'AF', name: 'Afghanistan' }, { code: 'AL', name: 'Albania' }, { code: 'DZ', name: 'Algeria' },
-  { code: 'AD', name: 'Andorra' }, { code: 'AO', name: 'Angola' }, { code: 'AG', name: 'Antigua and Barbuda' },
-  { code: 'AR', name: 'Argentina' }, { code: 'AM', name: 'Armenia' }, { code: 'AU', name: 'Australia' },
-  { code: 'AT', name: 'Austria' }, { code: 'AZ', name: 'Azerbaijan' }, { code: 'BS', name: 'Bahamas' },
-  { code: 'BH', name: 'Bahrain' }, { code: 'BD', name: 'Bangladesh' }, { code: 'BB', name: 'Barbados' },
-  { code: 'BY', name: 'Belarus' }, { code: 'BE', name: 'Belgium' }, { code: 'BZ', name: 'Belize' },
-  { code: 'BJ', name: 'Benin' }, { code: 'BT', name: 'Bhutan' }, { code: 'BO', name: 'Bolivia' },
-  { code: 'BA', name: 'Bosnia and Herzegovina' }, { code: 'BW', name: 'Botswana' }, { code: 'BR', name: 'Brazil' },
-  { code: 'BN', name: 'Brunei' }, { code: 'BG', name: 'Bulgaria' }, { code: 'BF', name: 'Burkina Faso' },
-  { code: 'BI', name: 'Burundi' }, { code: 'CV', name: 'Cabo Verde' }, { code: 'KH', name: 'Cambodia' },
-  { code: 'CM', name: 'Cameroon' }, { code: 'CA', name: 'Canada' }, { code: 'CF', name: 'Central African Republic' },
-  { code: 'TD', name: 'Chad' }, { code: 'CL', name: 'Chile' }, { code: 'CN', name: 'China' },
-  { code: 'CO', name: 'Colombia' }, { code: 'KM', name: 'Comoros' }, { code: 'CG', name: 'Congo' },
-  { code: 'CD', name: 'Congo (DRC)' }, { code: 'CR', name: 'Costa Rica' }, { code: 'CI', name: "Côte d'Ivoire" },
-  { code: 'HR', name: 'Croatia' }, { code: 'CU', name: 'Cuba' }, { code: 'CY', name: 'Cyprus' },
-  { code: 'CZ', name: 'Czech Republic' }, { code: 'DK', name: 'Denmark' }, { code: 'DJ', name: 'Djibouti' },
-  { code: 'DO', name: 'Dominican Republic' }, { code: 'EC', name: 'Ecuador' }, { code: 'EG', name: 'Egypt' },
-  { code: 'SV', name: 'El Salvador' }, { code: 'GQ', name: 'Equatorial Guinea' }, { code: 'ER', name: 'Eritrea' },
-  { code: 'EE', name: 'Estonia' }, { code: 'SZ', name: 'Eswatini' }, { code: 'ET', name: 'Ethiopia' },
-  { code: 'FJ', name: 'Fiji' }, { code: 'FI', name: 'Finland' }, { code: 'FR', name: 'France' },
-  { code: 'GA', name: 'Gabon' }, { code: 'GM', name: 'Gambia' }, { code: 'GE', name: 'Georgia' },
-  { code: 'DE', name: 'Germany' }, { code: 'GH', name: 'Ghana' }, { code: 'GR', name: 'Greece' },
-  { code: 'GD', name: 'Grenada' }, { code: 'GT', name: 'Guatemala' }, { code: 'GN', name: 'Guinea' },
-  { code: 'GW', name: 'Guinea-Bissau' }, { code: 'GY', name: 'Guyana' }, { code: 'HT', name: 'Haiti' },
-  { code: 'HN', name: 'Honduras' }, { code: 'HU', name: 'Hungary' }, { code: 'IS', name: 'Iceland' },
-  { code: 'IN', name: 'India' }, { code: 'ID', name: 'Indonesia' }, { code: 'IR', name: 'Iran' },
-  { code: 'IQ', name: 'Iraq' }, { code: 'IE', name: 'Ireland' }, { code: 'IL', name: 'Israel' },
-  { code: 'IT', name: 'Italy' }, { code: 'JM', name: 'Jamaica' }, { code: 'JP', name: 'Japan' },
-  { code: 'JO', name: 'Jordan' }, { code: 'KZ', name: 'Kazakhstan' }, { code: 'KE', name: 'Kenya' },
-  { code: 'KI', name: 'Kiribati' }, { code: 'KP', name: 'Korea (North)' }, { code: 'KR', name: 'Korea (South)' },
-  { code: 'KW', name: 'Kuwait' }, { code: 'KG', name: 'Kyrgyzstan' }, { code: 'LA', name: 'Laos' },
-  { code: 'LV', name: 'Latvia' }, { code: 'LB', name: 'Lebanon' }, { code: 'LS', name: 'Lesotho' },
-  { code: 'LR', name: 'Liberia' }, { code: 'LY', name: 'Libya' }, { code: 'LI', name: 'Liechtenstein' },
-  { code: 'LT', name: 'Lithuania' }, { code: 'LU', name: 'Luxembourg' }, { code: 'MG', name: 'Madagascar' },
-  { code: 'MW', name: 'Malawi' }, { code: 'MY', name: 'Malaysia' }, { code: 'MV', name: 'Maldives' },
-  { code: 'ML', name: 'Mali' }, { code: 'MT', name: 'Malta' }, { code: 'MH', name: 'Marshall Islands' },
-  { code: 'MR', name: 'Mauritania' }, { code: 'MU', name: 'Mauritius' }, { code: 'MX', name: 'Mexico' },
-  { code: 'FM', name: 'Micronesia' }, { code: 'MD', name: 'Moldova' }, { code: 'MC', name: 'Monaco' },
-  { code: 'MN', name: 'Mongolia' }, { code: 'ME', name: 'Montenegro' }, { code: 'MA', name: 'Morocco' },
-  { code: 'MZ', name: 'Mozambique' }, { code: 'MM', name: 'Myanmar' }, { code: 'NA', name: 'Namibia' },
-  { code: 'NR', name: 'Nauru' }, { code: 'NP', name: 'Nepal' }, { code: 'NL', name: 'Netherlands' },
-  { code: 'NZ', name: 'New Zealand' }, { code: 'NI', name: 'Nicaragua' }, { code: 'NE', name: 'Niger' },
-  { code: 'NG', name: 'Nigeria' }, { code: 'MK', name: 'North Macedonia' }, { code: 'NO', name: 'Norway' },
-  { code: 'OM', name: 'Oman' }, { code: 'PK', name: 'Pakistan' }, { code: 'PW', name: 'Palau' },
-  { code: 'PA', name: 'Panama' }, { code: 'PG', name: 'Papua New Guinea' }, { code: 'PY', name: 'Paraguay' },
-  { code: 'PE', name: 'Peru' }, { code: 'PH', name: 'Philippines' }, { code: 'PL', name: 'Poland' },
-  { code: 'PT', name: 'Portugal' }, { code: 'QA', name: 'Qatar' }, { code: 'RO', name: 'Romania' },
-  { code: 'RU', name: 'Russia' }, { code: 'RW', name: 'Rwanda' }, { code: 'KN', name: 'Saint Kitts and Nevis' },
-  { code: 'LC', name: 'Saint Lucia' }, { code: 'VC', name: 'Saint Vincent and the Grenadines' },
-  { code: 'WS', name: 'Samoa' }, { code: 'SM', name: 'San Marino' }, { code: 'ST', name: 'São Tomé and Príncipe' },
-  { code: 'SA', name: 'Saudi Arabia' }, { code: 'SN', name: 'Senegal' }, { code: 'RS', name: 'Serbia' },
-  { code: 'SC', name: 'Seychelles' }, { code: 'SL', name: 'Sierra Leone' }, { code: 'SG', name: 'Singapore' },
-  { code: 'SK', name: 'Slovakia' }, { code: 'SI', name: 'Slovenia' }, { code: 'SB', name: 'Solomon Islands' },
-  { code: 'SO', name: 'Somalia' }, { code: 'ZA', name: 'South Africa' }, { code: 'SS', name: 'South Sudan' },
-  { code: 'ES', name: 'Spain' }, { code: 'LK', name: 'Sri Lanka' }, { code: 'SD', name: 'Sudan' },
-  { code: 'SR', name: 'Suriname' }, { code: 'SE', name: 'Sweden' }, { code: 'CH', name: 'Switzerland' },
-  { code: 'SY', name: 'Syria' }, { code: 'TW', name: 'Taiwan' }, { code: 'TJ', name: 'Tajikistan' },
-  { code: 'TZ', name: 'Tanzania' }, { code: 'TH', name: 'Thailand' }, { code: 'TL', name: 'Timor-Leste' },
-  { code: 'TG', name: 'Togo' }, { code: 'TO', name: 'Tonga' }, { code: 'TT', name: 'Trinidad and Tobago' },
-  { code: 'TN', name: 'Tunisia' }, { code: 'TR', name: 'Turkey' }, { code: 'TM', name: 'Turkmenistan' },
-  { code: 'TV', name: 'Tuvalu' }, { code: 'UG', name: 'Uganda' }, { code: 'UA', name: 'Ukraine' },
-  { code: 'AE', name: 'United Arab Emirates' }, { code: 'GB', name: 'United Kingdom' },
-  { code: 'US', name: 'United States' }, { code: 'UY', name: 'Uruguay' }, { code: 'UZ', name: 'Uzbekistan' },
-  { code: 'VU', name: 'Vanuatu' }, { code: 'VE', name: 'Venezuela' }, { code: 'VN', name: 'Vietnam' },
-  { code: 'YE', name: 'Yemen' }, { code: 'ZM', name: 'Zambia' }, { code: 'ZW', name: 'Zimbabwe' },
-]
+import { postTourReset, setTourSeenCached } from '@/lib/tour'
+import { COUNTRIES } from '@/lib/countries'
+import { useIsMobile } from '@/lib/useIsMobile'
 
 export default function AccountPage() {
   const [userEmail, setUserEmail] = useState<string | null>(null)
@@ -101,9 +36,23 @@ export default function AccountPage() {
   const [keyError, setKeyError] = useState<string | null>(null)
   const [keyRemoving, setKeyRemoving] = useState(false)
   const [showKey, setShowKey] = useState(false)
+  const [revealedKey, setRevealedKey] = useState<string | null>(null)
+  const [keyRevealing, setKeyRevealing] = useState(false)
+
+  // Excluded Gmail labels state
+  const STANDARD_LABELS = ['promotions', 'spam', 'social', 'forums'] as const
+  const [excludeFilters, setExcludeFilters] = useState<Record<string, boolean>>({
+    promotions: true, spam: true, social: true, forums: true,
+  })
+  const [customLabels, setCustomLabels] = useState<string[]>([])
+  const [newLabelInput, setNewLabelInput] = useState('')
+  const [labelsSaving, setLabelsSaving] = useState(false)
+  const [labelsSaved, setLabelsSaved] = useState(false)
+  const [labelsError, setLabelsError] = useState<string | null>(null)
 
   // Delete state
   const [deleting, setDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   useEffect(() => {
     fetch(`${API_URL}/api/me`, { credentials: 'include' })
@@ -120,6 +69,17 @@ export default function AccountPage() {
           if (match) setHomeCountryCode(match.code)
         }
         setHasKey(d.has_openrouter_key ?? false)
+
+        const stored: string[] = d.excluded_gmail_labels ?? ['promotions', 'spam', 'social', 'forums']
+        const standard = new Set(['promotions', 'spam', 'social', 'forums'])
+        setExcludeFilters({
+          promotions: stored.includes('promotions'),
+          spam:       stored.includes('spam'),
+          social:     stored.includes('social'),
+          forums:     stored.includes('forums'),
+        })
+        setCustomLabels(stored.filter(l => !standard.has(l)))
+
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -137,6 +97,8 @@ export default function AccountPage() {
     return () => document.removeEventListener('mousedown', onOutside)
   }, [])
 
+  const isMobile = useIsMobile()
+
   function selectCountry(code: string, name: string) {
     setHomeCountry(name)
     setHomeCountryCode(code)
@@ -147,6 +109,34 @@ export default function AccountPage() {
   const filteredCountries = COUNTRIES.filter(c =>
     c.name.toLowerCase().includes(countrySearch.toLowerCase())
   )
+
+  async function saveExcludedLabels() {
+    setLabelsSaving(true)
+    setLabelsError(null)
+    const labels = [
+      ...STANDARD_LABELS.filter(l => excludeFilters[l]),
+      ...customLabels,
+    ]
+    try {
+      const r = await fetch(`${API_URL}/api/settings/excluded-labels`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ labels }),
+      })
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}))
+        setLabelsError(d.detail ?? `Error ${r.status}`)
+      } else {
+        setLabelsSaved(true)
+        setTimeout(() => setLabelsSaved(false), 2500)
+      }
+    } catch {
+      setLabelsError('Could not reach the server.')
+    } finally {
+      setLabelsSaving(false)
+    }
+  }
 
   async function saveProfile() {
     setSaving(true)
@@ -197,6 +187,7 @@ export default function AccountPage() {
       } else {
         setHasKey(true)
         setKeyInput('')
+        setRevealedKey(null)
         setKeySaved(true)
         setTimeout(() => setKeySaved(false), 2500)
       }
@@ -223,6 +214,7 @@ export default function AccountPage() {
       } else {
         setHasKey(false)
         setKeyInput('')
+        setRevealedKey(null)
       }
     } catch {
       setKeyError('Could not reach the server.')
@@ -231,9 +223,23 @@ export default function AccountPage() {
     }
   }
 
+  async function toggleRevealKey() {
+    if (revealedKey) { setRevealedKey(null); return }
+    setKeyRevealing(true)
+    try {
+      const r = await fetch(`${API_URL}/api/settings/openrouter-key`, { credentials: 'include' })
+      if (r.ok) {
+        const d = await r.json()
+        setRevealedKey(d.key)
+      }
+    } finally {
+      setKeyRevealing(false)
+    }
+  }
+
   async function deleteAllData() {
-    if (!confirm('Permanently delete all your data? This cannot be undone.')) return
     setDeleting(true)
+    setShowDeleteConfirm(false)
     try {
       await fetch(`${API_URL}/api/me`, { method: 'DELETE', credentials: 'include' })
       window.location.href = `${API_URL}/disconnect`
@@ -458,18 +464,59 @@ export default function AccountPage() {
           </p>
 
           {hasKey && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '0.5rem',
-              fontSize: '0.82rem', color: 'var(--text-accent)',
-              marginBottom: '1rem',
-            }}>
-              <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: 'var(--text-accent)', flexShrink: 0 }} />
-              API key configured
+            <div style={{ marginBottom: '1rem' }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                fontSize: '0.82rem', color: 'var(--text-accent)',
+              }}>
+                <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: 'var(--text-accent)', flexShrink: 0 }} />
+                API key configured
+                <button
+                  type="button"
+                  onClick={toggleRevealKey}
+                  disabled={keyRevealing}
+                  aria-label={revealedKey ? 'Hide key' : 'Reveal key'}
+                  title={revealedKey ? 'Hide key' : 'Reveal key'}
+                  style={{
+                    background: 'none', border: 'none', cursor: keyRevealing ? 'default' : 'pointer',
+                    padding: '0.15rem', color: 'var(--text-accent)', display: 'flex', alignItems: 'center',
+                    opacity: keyRevealing ? 0.5 : 1,
+                  }}
+                >
+                  {revealedKey ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                      <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  )}
+                </button>
+              </div>
+              {revealedKey && (
+                <div style={{
+                  marginTop: '0.45rem',
+                  padding: '0.45rem 0.75rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'rgba(0,0,0,0.04)',
+                  border: '1px solid var(--border)',
+                  fontFamily: 'monospace',
+                  fontSize: '0.78rem',
+                  color: 'var(--text)',
+                  wordBreak: 'break-all',
+                }}>
+                  {revealedKey}
+                </div>
+              )}
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-            <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 0 }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', flexWrap: 'wrap', flexDirection: isMobile ? 'column' : 'row' }}>
+            <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 0, width: isMobile ? '100%' : undefined }}>
               <input
                 type={showKey ? 'text' : 'password'}
                 className="input"
@@ -508,7 +555,7 @@ export default function AccountPage() {
               onClick={saveKey}
               disabled={!keyInput.trim() || keySaving}
               className="btn btn-primary"
-              style={{ fontSize: '0.82rem', whiteSpace: 'nowrap', flexShrink: 0 }}
+              style={{ fontSize: '0.82rem', whiteSpace: 'nowrap', flexShrink: 0, width: isMobile ? '100%' : undefined }}
             >
               {keySaving ? 'Verifying…' : hasKey ? 'Update key' : 'Save key'}
             </button>
@@ -528,6 +575,7 @@ export default function AccountPage() {
                   whiteSpace: 'nowrap',
                   flexShrink: 0,
                   opacity: keyRemoving ? 0.6 : 1,
+                  width: isMobile ? '100%' : undefined,
                 }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(248,113,113,0.08)' }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
@@ -543,6 +591,29 @@ export default function AccountPage() {
           {keyError && (
             <p style={{ fontSize: '0.8rem', color: '#f87171', margin: '0.5rem 0 0' }}>{keyError}</p>
           )}
+        </div>
+      )}
+
+      {/* Product tour */}
+      {!isDemo && (
+        <div className="fade-up d-350 glass-subtle" style={{ borderRadius: 'var(--radius-xl)', padding: '1.5rem', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '0 0 0.6rem' }}>
+            Product tour
+          </h2>
+          <p style={{ fontSize: '0.83rem', color: 'var(--text-muted)', margin: '0 0 1rem', lineHeight: 1.55 }}>
+            Walk through the dashboard highlights again.
+          </p>
+          <button
+            className="btn btn-ghost"
+            style={{ fontSize: '0.82rem' }}
+            onClick={async () => {
+              await postTourReset()
+              setTourSeenCached(false)
+              window.location.href = '/'
+            }}
+          >
+            Replay tour →
+          </button>
         </div>
       )}
 
@@ -571,6 +642,94 @@ export default function AccountPage() {
           Manage categories →
         </Link>
       </div>
+
+      {/* Excluded Gmail Labels */}
+      {!isDemo && (
+        <div className="fade-up d-450 glass-subtle" style={{ borderRadius: 'var(--radius-xl)', padding: '1.5rem', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '0 0 0.4rem' }}>
+            Excluded Gmail Labels
+          </h2>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0 0 1.25rem', lineHeight: 1.5 }}>
+            Emails in these labels are skipped during scanning.
+          </p>
+
+          {/* Standard checkboxes */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', marginBottom: '1.25rem' }}>
+            {(['promotions', 'spam', 'social', 'forums'] as const).map(key => (
+              <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.83rem', color: 'var(--text)' }}>
+                <input
+                  type="checkbox"
+                  checked={!!excludeFilters[key]}
+                  onChange={e => setExcludeFilters(f => ({ ...f, [key]: e.target.checked }))}
+                />
+                {key.charAt(0).toUpperCase() + key.slice(1)}
+              </label>
+            ))}
+          </div>
+
+          {/* Custom labels */}
+          {customLabels.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1rem' }}>
+              {customLabels.map((lbl, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.83rem', color: 'var(--text)' }}>{lbl}</span>
+                  <button
+                    onClick={() => setCustomLabels(prev => prev.filter((_, idx) => idx !== i))}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.75rem', padding: '0.15rem 0.4rem' }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add custom label */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
+            <input
+              className="input"
+              type="text"
+              placeholder="Gmail label name…"
+              value={newLabelInput}
+              onChange={e => setNewLabelInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  const t = newLabelInput.trim()
+                  if (t && !customLabels.includes(t) && !STANDARD_LABELS.includes(t as typeof STANDARD_LABELS[number])) {
+                    setCustomLabels(prev => [...prev, t])
+                    setNewLabelInput('')
+                  }
+                }
+              }}
+              style={{ flex: 1, fontSize: '0.83rem' }}
+            />
+            <button
+              className="btn btn-ghost"
+              style={{ fontSize: '0.82rem', whiteSpace: 'nowrap' }}
+              onClick={() => {
+                const t = newLabelInput.trim()
+                if (t && !customLabels.includes(t) && !STANDARD_LABELS.includes(t as typeof STANDARD_LABELS[number])) {
+                  setCustomLabels(prev => [...prev, t])
+                  setNewLabelInput('')
+                }
+              }}
+            >
+              Add
+            </button>
+          </div>
+
+          <button
+            className="btn btn-primary"
+            style={{ fontSize: '0.82rem' }}
+            onClick={saveExcludedLabels}
+            disabled={labelsSaving}
+          >
+            {labelsSaving ? 'Saving…' : 'Save'}
+          </button>
+          {labelsSaved && <span style={{ marginLeft: '0.75rem', fontSize: '0.8rem', color: 'var(--text-accent)' }}>Saved ✓</span>}
+          {labelsError && <p style={{ fontSize: '0.8rem', color: '#f87171', margin: '0.5rem 0 0' }}>{labelsError}</p>}
+        </div>
+      )}
 
       {/* Session card */}
       <div className="fade-up d-500 glass-subtle" style={{ borderRadius: 'var(--radius-xl)', padding: '1.5rem', marginBottom: '1rem' }}>
@@ -611,7 +770,7 @@ export default function AccountPage() {
               </p>
             </div>
             <button
-              onClick={deleteAllData}
+              onClick={() => setShowDeleteConfirm(true)}
               disabled={deleting}
               style={{
                 padding: '0.45rem 1rem',
@@ -631,6 +790,69 @@ export default function AccountPage() {
             >
               {deleting ? 'Deleting…' : 'Delete all data'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div
+          onClick={() => setShowDeleteConfirm(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 50,
+            background: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '1.5rem',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="glass fade-in modal-card"
+            style={{
+              borderRadius: 'var(--radius-xl)',
+              padding: '1.75rem',
+              width: '100%', maxWidth: 400,
+              border: '1px solid rgba(248,113,113,0.3)',
+              boxShadow: '0 24px 64px rgba(0,0,0,0.35)',
+              display: 'flex', flexDirection: 'column', gap: '1.25rem',
+            }}
+          >
+            <div>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 600, color: 'var(--text)', margin: '0 0 0.5rem' }}>
+                Delete all data?
+              </h2>
+              <p style={{ fontSize: '0.83rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.55 }}>
+                This will permanently remove all your scanned emails, trips, and preferences. This action cannot be undone.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="btn btn-ghost"
+                style={{ fontSize: '0.82rem' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={deleteAllData}
+                style={{
+                  padding: '0.45rem 1rem',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid rgba(248,113,113,0.5)',
+                  background: 'rgba(248,113,113,0.12)',
+                  color: '#f87171',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'background 150ms',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(248,113,113,0.22)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(248,113,113,0.12)' }}
+              >
+                Yes, delete everything
+              </button>
+            </div>
           </div>
         </div>
       )}

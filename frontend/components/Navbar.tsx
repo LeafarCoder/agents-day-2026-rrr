@@ -2,11 +2,24 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
 import { API_URL } from "@/lib/api";
+import { useIsMobile } from "@/lib/useIsMobile";
+
+const NAV_LINKS = [
+  { href: "/",           label: "Profile" },
+  { href: "/email-scan", label: "Scan"    },
+  { href: "/results",    label: "Results" },
+  { href: "/trips",      label: "Trips"   },
+  { href: "/account",    label: "Account" },
+] as const;
 
 export default function Navbar() {
   const [isDemo, setIsDemo] = useState(false);
+  const [open, setOpen] = useState(false);
+  const isMobile = useIsMobile();
+  const pathname = usePathname();
 
   useEffect(() => {
     fetch(`${API_URL}/api/me`, { credentials: "include" })
@@ -15,126 +28,302 @@ export default function Navbar() {
       .catch(() => {})
   }, []);
 
-  return (
-    <header
-      style={{
-        position: "fixed",
-        top: 0, left: 0, right: 0,
-        zIndex: 50,
-        height: "60px",
-        display: "flex",
-        alignItems: "center",
-        padding: "0 1.5rem",
-        background: "var(--nav-surface)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        borderBottom: "1px solid var(--nav-border)",
-        transition: "background 300ms ease",
-      }}
-    >
-      <nav
+  // Close drawer on route change
+  useEffect(() => { setOpen(false); }, [pathname]);
+
+  // Lock/restore body scroll when drawer is open
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [open]);
+
+  const brand = (
+    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+      <Link
+        href="/"
         style={{
-          width: "100%",
-          maxWidth: "1200px",
-          margin: "0 auto",
+          fontFamily: "var(--font-display)",
+          fontSize: "1.15rem",
+          fontWeight: 600,
+          color: "var(--text)",
+          textDecoration: "none",
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
+          gap: "0.45rem",
+          letterSpacing: "0.01em",
         }}
       >
-        {/* Brand + demo pill */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <Link
-            href="/"
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: "1.15rem",
-              fontWeight: 600,
-              color: "var(--text)",
-              textDecoration: "none",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.45rem",
-              letterSpacing: "0.01em",
-            }}
-          >
-            <span style={{ color: "var(--text-accent)", fontSize: "1.1rem" }}>✦</span>
-            Travel DNA
-          </Link>
-          {isDemo && (
-            <span style={{
-              fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.1em",
-              textTransform: "uppercase", color: "#040b18",
-              background: "var(--text-accent)", borderRadius: "var(--radius-sm)",
-              padding: "0.15rem 0.5rem",
-            }}>
-              Demo
-            </span>
-          )}
-        </div>
+        <span style={{ color: "var(--text-accent)", fontSize: "1.1rem" }}>✦</span>
+        Travel DNA
+      </Link>
+      {isDemo && (
+        <span style={{
+          fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.1em",
+          textTransform: "uppercase", color: "#040b18",
+          background: "var(--text-accent)", borderRadius: "var(--radius-sm)",
+          padding: "0.15rem 0.5rem",
+        }}>
+          Demo
+        </span>
+      )}
+    </div>
+  );
 
-        {/* Nav links + optional exit-demo + theme toggle */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-          {[
-            { href: "/",           label: "Profile" },
-            { href: "/email-scan", label: "Scan"    },
-            { href: "/scan",       label: "Results" },
-            { href: "/account",    label: "Account" },
-          ].map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
+  return (
+    <>
+      <header
+        style={{
+          position: "fixed",
+          top: 0, left: 0, right: 0,
+          zIndex: 50,
+          height: "60px",
+          display: "flex",
+          alignItems: "center",
+          padding: "0 1.5rem",
+          background: "var(--nav-surface)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderBottom: "1px solid var(--nav-border)",
+          transition: "background 300ms ease",
+        }}
+      >
+        <nav
+          style={{
+            width: "100%",
+            maxWidth: "1200px",
+            margin: "0 auto",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          {brand}
+
+          {isMobile ? (
+            /* ── Hamburger button (mobile) ── */
+            <button
+              onClick={() => setOpen(o => !o)}
+              aria-label="Menu"
+              aria-expanded={open}
               style={{
-                padding: "0.375rem 0.75rem",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                gap: "5px",
+                width: 36,
+                height: 36,
+                padding: "6px",
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
                 borderRadius: "var(--radius-md)",
-                fontSize: "0.82rem",
-                fontWeight: 500,
-                color: "var(--text-muted)",
-                textDecoration: "none",
-                transition: "color 180ms ease, background 180ms ease",
-                letterSpacing: "0.02em",
-              }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLElement).style.color = "var(--text)";
-                (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)";
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
-                (e.currentTarget as HTMLElement).style.background = "transparent";
               }}
             >
-              {label}
-            </Link>
-          ))}
+              {[0, 1, 2].map(i => (
+                <span
+                  key={i}
+                  style={{
+                    display: "block",
+                    height: 2,
+                    background: "var(--text-muted)",
+                    borderRadius: 1,
+                    transition: "transform 200ms ease, opacity 200ms ease",
+                    transformOrigin: "center",
+                    ...(open && i === 0 ? { transform: "translateY(7px) rotate(45deg)" } : {}),
+                    ...(open && i === 1 ? { opacity: 0 } : {}),
+                    ...(open && i === 2 ? { transform: "translateY(-7px) rotate(-45deg)" } : {}),
+                  }}
+                />
+              ))}
+            </button>
+          ) : (
+            /* ── Desktop nav links ── */
+            <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+              {NAV_LINKS.map(({ href, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  data-tour={href === '/account' ? 'nav-account' : undefined}
+                  style={{
+                    padding: "0.375rem 0.75rem",
+                    borderRadius: "var(--radius-md)",
+                    fontSize: "0.82rem",
+                    fontWeight: 500,
+                    color: "var(--text-muted)",
+                    textDecoration: "none",
+                    transition: "color 180ms ease, background 180ms ease",
+                    letterSpacing: "0.02em",
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLElement).style.color = "var(--text)";
+                    (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)";
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
+                    (e.currentTarget as HTMLElement).style.background = "transparent";
+                  }}
+                >
+                  {label}
+                </Link>
+              ))}
 
-          {isDemo && (
-            <>
-              <div style={{ width: "1px", height: 18, background: "var(--border)", margin: "0 0.25rem" }} aria-hidden="true" />
-              <a
-                href={`${API_URL}/auth`}
-                style={{
-                  padding: "0.35rem 0.8rem",
-                  borderRadius: "var(--radius-md)",
-                  fontSize: "0.78rem",
-                  fontWeight: 600,
-                  color: "var(--text-accent)",
-                  border: "1px solid var(--border-accent)",
-                  textDecoration: "none",
-                  transition: "background 180ms ease",
-                  whiteSpace: "nowrap",
-                }}
-                onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = "rgba(0,212,170,0.08)")}
-                onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = "transparent")}
-              >
-                Sign In →
-              </a>
-            </>
+              {isDemo && (
+                <>
+                  <div style={{ width: "1px", height: 18, background: "var(--border)", margin: "0 0.25rem" }} aria-hidden="true" />
+                  <a
+                    href={`${API_URL}/auth`}
+                    style={{
+                      padding: "0.35rem 0.8rem",
+                      borderRadius: "var(--radius-md)",
+                      fontSize: "0.78rem",
+                      fontWeight: 600,
+                      color: "var(--text-accent)",
+                      border: "1px solid var(--border-accent)",
+                      textDecoration: "none",
+                      transition: "background 180ms ease",
+                      whiteSpace: "nowrap",
+                    }}
+                    onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = "rgba(0,212,170,0.08)")}
+                    onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = "transparent")}
+                  >
+                    Sign In →
+                  </a>
+                </>
+              )}
+
+              <div style={{ width: "1px", height: 18, background: "var(--border)", margin: "0 0.4rem" }} aria-hidden="true" />
+              <ThemeToggle />
+            </div>
           )}
+        </nav>
+      </header>
 
-          <div style={{ width: "1px", height: 18, background: "var(--border)", margin: "0 0.4rem" }} aria-hidden="true" />
-          <ThemeToggle />
+      {/* ── Mobile drawer ── */}
+      {isMobile && open && (
+        <div
+          role="dialog"
+          aria-label="Navigation menu"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 60,
+            display: "flex",
+            flexDirection: "column",
+            background: "var(--nav-surface)",
+            backdropFilter: "blur(28px)",
+            WebkitBackdropFilter: "blur(28px)",
+          }}
+        >
+          {/* Drawer header — mirrors navbar */}
+          <div style={{
+            height: 60,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0 1.5rem",
+            borderBottom: "1px solid var(--nav-border)",
+            flexShrink: 0,
+          }}>
+            {brand}
+            <button
+              onClick={() => setOpen(false)}
+              aria-label="Close menu"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 36,
+                height: 36,
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                borderRadius: "var(--radius-md)",
+                color: "var(--text-muted)",
+                fontSize: "1.4rem",
+                lineHeight: 1,
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Drawer nav links */}
+          <nav style={{ flex: 1, overflowY: "auto", padding: "1rem 1.5rem" }}>
+            {NAV_LINKS.map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                data-tour={href === '/account' ? 'nav-account' : undefined}
+                onClick={() => setOpen(false)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  width: "100%",
+                  padding: "0.875rem 1rem",
+                  marginBottom: "0.25rem",
+                  borderRadius: "var(--radius-md)",
+                  fontSize: "1.05rem",
+                  fontWeight: 500,
+                  color: pathname === href ? "var(--text-accent)" : "var(--text)",
+                  background: pathname === href ? "rgba(0,212,170,0.07)" : "transparent",
+                  textDecoration: "none",
+                  border: "1px solid",
+                  borderColor: pathname === href ? "rgba(0,212,170,0.18)" : "transparent",
+                  letterSpacing: "0.01em",
+                }}
+              >
+                {label}
+              </Link>
+            ))}
+
+            <div style={{ height: 1, background: "var(--border)", margin: "1rem 0" }} />
+
+            {/* Theme toggle row */}
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "0.5rem 1rem",
+            }}>
+              <span style={{ fontSize: "0.9rem", color: "var(--text-muted)" }}>Theme</span>
+              <ThemeToggle />
+            </div>
+
+            {/* Demo sign-in CTA */}
+            {isDemo && (
+              <>
+                <div style={{ height: 1, background: "var(--border)", margin: "1rem 0" }} />
+                <a
+                  href={`${API_URL}/auth`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "100%",
+                    padding: "0.875rem 1rem",
+                    borderRadius: "var(--radius-md)",
+                    fontSize: "1rem",
+                    fontWeight: 600,
+                    color: "var(--text-accent)",
+                    border: "1px solid var(--border-accent)",
+                    textDecoration: "none",
+                  }}
+                >
+                  Sign In →
+                </a>
+              </>
+            )}
+          </nav>
         </div>
-      </nav>
-    </header>
+      )}
+    </>
   );
 }

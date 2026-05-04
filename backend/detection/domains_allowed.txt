@@ -1,0 +1,68 @@
+# Travel sender domains — emails from these are always considered candidates.
+# One domain per line. Subdomains are matched automatically (e.g. mail.airbnb.com → airbnb.com).
+# Lines starting with # and blank lines are ignored.
+
+# Global / cross-region
+airbnb.com
+booking.com
+eventbrite.com
+feverup.com
+getyourguide.com
+klook.com
+omio.com
+ticketmaster.com
+trainline.com
+todaytix.com
+12go.asia
+viator.com
+
+# Europe / flights / rail
+airfrance.com
+bahn.de
+easyjet.com
+edreams.com
+eurostar.com
+flixbus.com
+flytap.com
+iberia.com
+lastminute.com
+norwegian.com
+opodo.com
+ouigo.com
+renfe.com
+ryanair.com
+sncf-connect.com
+sncf.fr
+transavia.com
+trenitalia.com
+vueling.com
+wizzair.com
+
+# APAC / Australia
+airasia.com
+jetstar.com
+qantas.com
+singaporeair.com
+virginaustralia.com
+
+# Hotels / OTAs / attractions
+accorhotels.com
+agoda.com
+expedia.com
+hilton.com
+hostelworld.com
+hotels.com
+jewelchangiairport.com
+kayak.com
+kiwi.com
+marriott.com
+tripadvisor.com
+vrbo.com
+withlocals.com
+
+# Activity / ticket operators
+oceanario.pt
+ticketline.pt
+velanotejo.pt
+surfslisbon.com
+skyscanner.net

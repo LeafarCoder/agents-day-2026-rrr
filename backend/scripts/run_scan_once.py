@@ -9,6 +9,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
 from detection import profile as profile_builder
+from detection.config import _DEFAULT_ACTIVITY_SIGNALS
 from gmail import fetcher, parser
 import db.writer as writer
 
@@ -62,7 +63,7 @@ def main() -> None:
             "domain": domain,
             "subject": subject,
             "destination": destination,
-            "activities": parser.detect_activities(subject + " " + body_text),
+            "activities": parser.detect_activities(subject + " " + body_text, _DEFAULT_ACTIVITY_SIGNALS),
         })
 
     profile = profile_builder.build(bookings)

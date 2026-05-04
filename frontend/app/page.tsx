@@ -1,14 +1,27 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { API_URL } from '@/lib/api'
 import OpenRouterKeyModal from '@/components/OpenRouterKeyModal'
+import TourOverlay from '@/components/TourOverlay'
+import OnboardingModal from '@/components/OnboardingModal'
+import { TOUR_STEPS, getTourSeenCached, setTourSeenCached, postTourComplete } from '@/lib/tour'
+import { useIsMobile } from '@/lib/useIsMobile'
 
-const HERO_VERBS = ['Uncover', 'Decode', 'Discover', 'Sequence']
+const HERO_ADJECTIVES = [
+  'restless',
+  'curious',
+  'obsessive',
+  'deliberate',
+  'spontaneous',
+  'instinctive',
+  'meticulous',
+  'wandering',
+]
 
-function RotatingVerb() {
+function RotatingSubtitle() {
   const [idx, setIdx] = useState(0)
   const [show, setShow] = useState(true)
 
@@ -18,27 +31,27 @@ function RotatingVerb() {
     const id = setInterval(() => {
       setShow(false)
       swap = setTimeout(() => {
-        setIdx(i => (i + 1) % HERO_VERBS.length)
+        setIdx(i => (i + 1) % HERO_ADJECTIVES.length)
         setShow(true)
-      }, 320)
-    }, 3200)
+      }, 350)
+    }, 3800)
     return () => { clearInterval(id); clearTimeout(swap) }
   }, [])
 
   return (
-    <span style={{ display: 'inline-block', position: 'relative' }}>
-      {/* Width anchor — keeps layout stable across all verb lengths */}
-      <span aria-hidden="true" style={{ visibility: 'hidden', pointerEvents: 'none' }}>
-        Discover
-      </span>
+    <span>
+      For the{' '}
       <span style={{
-        position: 'absolute', left: 0, top: 0, whiteSpace: 'nowrap',
+        display: 'inline-block',
         opacity: show ? 1 : 0,
-        transform: show ? 'translateY(0)' : 'translateY(-10px)',
-        transition: 'opacity 320ms ease, transform 320ms ease',
+        transform: show ? 'translateY(0)' : 'translateY(7px)',
+        transition: 'opacity 350ms ease, transform 350ms ease',
+        color: 'var(--text)',
+        fontWeight: 600,
       }}>
-        {HERO_VERBS[idx]}
+        {HERO_ADJECTIVES[idx]}
       </span>
+      {' '}traveler.
     </span>
   )
 }
@@ -49,7 +62,8 @@ type KeywordPref = { keyword: string; count: number }
 type Preference = { total: number; keywords: KeywordPref[] }
 type CityVisit = { name: string; visits: string[] }
 type CountryVisit = { name: string; code: string; cities: CityVisit[] }
-type TripExperience = { category: string; examples: string[] }
+type TripKeyword = { keyword: string; subjects: string[] }
+type TripExperience = { category: string; keywords: TripKeyword[] }
 type TripData = { city: string; label: string | null; experiences: TripExperience[] }
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -66,6 +80,7 @@ type MeResponse = {
   connected: boolean
   demo: boolean
   has_openrouter_key: boolean
+  has_seen_tour: boolean
   user_email: string | null
   display_name: string | null
   home_city: string | null
@@ -122,11 +137,15 @@ export default function DashboardPage() {
   const [me, setMe] = useState<MeResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [showKeyModal, setShowKeyModal] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [tourActive, setTourActive] = useState(false)
   const [selectedCity, setSelectedCity] = useState<{ countryCode: string; cityName: string } | null>(null)
   const [expCache, setExpCache] = useState<Record<string, TripData[]>>({})
   const [expLoading, setExpLoading] = useState(false)
+  const [activeKw, setActiveKw] = useState<string | null>(null)
   const [visitGroup, setVisitGroup] = useState<VisitGroupMode>('country')
   const [openPrefs, setOpenPrefs] = useState<Set<string>>(new Set())
+  const isMobile = useIsMobile()
 
   async function selectCity(countryCode: string, cityName: string) {
     const key = `${countryCode}:${cityName}`
@@ -158,12 +177,29 @@ export default function DashboardPage() {
       .then(r => r.json())
       .then((data: MeResponse) => {
         setMe(data)
-        if (data.connected && !data.demo && !data.has_openrouter_key) {
-          setShowKeyModal(true)
+        if (data.connected && !data.demo) {
+          const isFirstTime = !data.display_name && !data.home_city && !data.home_country
+          if (isFirstTime) {
+            setShowOnboarding(true)
+          } else if (!data.has_openrouter_key) {
+            setShowKeyModal(true)
+          }
         }
       })
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    if (loading || !me) return
+    if (!me.connected || me.demo) return
+    if (showKeyModal) return
+    if (!me.profile) return
+    if (me.has_seen_tour) { setTourSeenCached(true); return }
+    if (getTourSeenCached()) return
+    // Delay so the dashboard fade-up entrance animations settle before measuring targets
+    const id = window.setTimeout(() => setTourActive(true), 600)
+    return () => window.clearTimeout(id)
+  }, [loading, me, showKeyModal])
 
   const _countries = me?.profile?.countries_visited ?? []
 
@@ -235,18 +271,28 @@ export default function DashboardPage() {
             fontWeight: 600,
             lineHeight: 1.1,
             color: 'var(--text)',
-            marginBottom: '1.25rem',
+            marginBottom: '0.6rem',
             letterSpacing: '-0.02em',
           }}>
-            <RotatingVerb /> Your<br />
+            Uncover Your<br />
             <span style={{ color: 'var(--text-accent)' }}>Travel DNA</span>
           </h1>
 
-          <p className="fade-up d-200" style={{ fontSize: '1.05rem', color: 'var(--text-muted)', marginBottom: '2.5rem', lineHeight: 1.7 }}>
+          <p className="fade-up d-200" style={{
+            fontSize: 'clamp(1.25rem, 3vw, 1.65rem)',
+            fontWeight: 400,
+            color: 'var(--text-muted)',
+            marginBottom: '1.75rem',
+            lineHeight: 1.45,
+          }}>
+            <RotatingSubtitle />
+          </p>
+
+          <p className="fade-up d-300" style={{ fontSize: '1.05rem', color: 'var(--text-muted)', marginBottom: '2.5rem', lineHeight: 1.7, opacity: 0.7 }}>
             Sign in to scan your booking history and build a rich preference profile — email bodies never leave your device.
           </p>
 
-          <div className="fade-up d-300" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div className="fade-up d-400" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <a href={`${API_URL}/auth`} className="btn btn-primary" style={{ fontSize: '0.95rem', padding: '0.75rem 1.75rem' }}>
               Sign In
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
@@ -259,21 +305,50 @@ export default function DashboardPage() {
           </div>
 
           {/* Feature grid */}
-          <div className="fade-up d-400" style={{
+          <div className="fade-up d-500" style={{
             marginTop: '3rem',
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
             gap: '0.75rem',
             textAlign: 'left',
           }}>
-            {[
-              { color: '#00d4aa', gradient: 'linear-gradient(135deg, #00d4aa 0%, #00a884 100%)', title: 'LLM-parsed bookings', desc: 'Extracts flights, hotels & restaurants from messy emails.' },
-              { color: '#4a9eff', gradient: 'linear-gradient(135deg, #4a9eff 0%, #1a6fd4 100%)', title: 'World map', desc: 'Countries, continents, microstates — all visualized.' },
-              { color: '#c8a97e', gradient: 'linear-gradient(135deg, #e8d5b0 0%, #c8a97e 100%)', title: 'Activity & taste signals', desc: 'Surfaces what you actually like doing on trips.' },
-              { color: '#a78bfa', gradient: 'linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%)', title: 'Year-over-year patterns', desc: 'See how your travel rhythm shifts season by season.' },
-              { color: '#f59e0b', gradient: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)', title: 'One-click rescan', desc: 'Re-process new emails without losing prior signals.' },
-              { color: '#34d399', gradient: 'linear-gradient(135deg, #34d399 0%, #059669 100%)', title: 'Privacy-first by design', desc: 'Email bodies stay local — only signals reach the cloud.' },
-            ].map(({ gradient, title, desc }) => (
+            {([
+              { title: 'LLM-parsed bookings', desc: 'Extracts flights, hotels & restaurants from messy emails.', icon: (
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="4" width="20" height="16" rx="2"/>
+                  <path d="M22 7l-10 7L2 7"/>
+                </svg>
+              )},
+              { title: 'World map', desc: 'Countries, continents, microstates — all visualized.', icon: (
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M2 12h20"/>
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                </svg>
+              )},
+              { title: 'Activity & taste signals', desc: 'Surfaces what you actually like doing on trips.', icon: (
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                </svg>
+              )},
+              { title: 'Year-over-year patterns', desc: 'See how your travel rhythm shifts season by season.', icon: (
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 20V10M12 20V4M6 20v-6"/>
+                </svg>
+              )},
+              { title: 'One-click rescan', desc: 'Re-process new emails without losing prior signals.', icon: (
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 4v6h-6"/>
+                  <path d="M1 20v-6h6"/>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+              )},
+              { title: 'Privacy-first by design', desc: 'Email bodies stay local — only signals reach the cloud.', icon: (
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11z"/>
+                </svg>
+              )},
+            ] as { title: string; desc: string; icon: React.ReactNode }[]).map(({ title, desc, icon }) => (
               <div key={title} className="glass-subtle" style={{
                 borderRadius: 'var(--radius-lg)',
                 padding: '1rem',
@@ -281,12 +356,9 @@ export default function DashboardPage() {
                 flexDirection: 'column',
                 gap: '0.6rem',
               }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: 10,
-                  background: gradient,
-                  flexShrink: 0,
-                  opacity: 0.85,
-                }} />
+                <div style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+                  {icon}
+                </div>
                 <div>
                   <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.2rem' }}>{title}</div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>{desc}</div>
@@ -300,6 +372,24 @@ export default function DashboardPage() {
   }
 
   /* ── Connected ─────────────────────────────────────────────────── */
+  if (showOnboarding) {
+    return (
+      <OnboardingModal
+        onComplete={({ hasKey, displayName, homeCity, homeCountry, homeCountryCode }) => {
+          setShowOnboarding(false)
+          setMe(prev => prev ? {
+            ...prev,
+            display_name:      displayName,
+            home_city:         homeCity,
+            home_country:      homeCountry,
+            home_country_code: homeCountryCode,
+            has_openrouter_key: hasKey || (prev.has_openrouter_key ?? false),
+          } : prev)
+        }}
+      />
+    )
+  }
+
   if (showKeyModal) {
     return (
       <OpenRouterKeyModal
@@ -324,7 +414,7 @@ export default function DashboardPage() {
     <div style={{ minHeight: '100vh', padding: '88px 1.5rem 4rem', maxWidth: 680, margin: '0 auto' }}>
 
       {/* Greeting */}
-      <div className="fade-up" style={{ marginBottom: '2.5rem' }}>
+      <div className="fade-up" data-tour="greeting" style={{ marginBottom: '2.5rem' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
           Hello{me.display_name ? `, ${me.display_name}` : ''}
         </h1>
@@ -338,15 +428,15 @@ export default function DashboardPage() {
       {/* Stats */}
       {profile && (
         <>
-          <div className="fade-up d-200" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1.5rem' }}>
+          <div className="fade-up d-200" data-tour="stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: isMobile ? '0.5rem' : '0.75rem', marginBottom: '1.5rem' }}>
             {[
               { label: 'Emails',       value: profile.email_count ?? 0 },
               { label: 'Countries', value: countries.length },
               { label: 'Preferences',  value: prefs.length },
             ].map(({ label, value }) => (
-              <div key={label} className="glass-subtle" style={{ borderRadius: 'var(--radius-lg)', padding: '1.1rem', textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1 }}>{value}</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.4rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{label}</div>
+              <div key={label} className="glass-subtle" style={{ borderRadius: 'var(--radius-lg)', padding: isMobile ? '0.75rem 0.5rem' : '1.1rem', textAlign: 'center' }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: isMobile ? '1.5rem' : '2rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1 }}>{value}</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '0.4rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{label}</div>
               </div>
             ))}
           </div>
@@ -356,14 +446,14 @@ export default function DashboardPage() {
 
       {/* World map */}
       {countries.length > 0 && (
-        <div style={{ marginTop: '1.5rem' }}>
+        <div data-tour="world-map" style={{ marginTop: '1.5rem' }}>
           <WorldMap countries={countries} onCitySelect={selectCity} />
         </div>
       )}
 
       {/* Places visited cards */}
       {countries.length > 0 && (
-        <div className="fade-up d-400" style={{ marginTop: '1.5rem', width: 'min(1100px, calc(100vw - 3rem))', marginLeft: 'min(0px, calc((100% - min(1100px, calc(100vw - 3rem))) / 2))' }}>
+        <div className="fade-up d-400" data-tour="places" style={{ marginTop: '1.5rem', width: 'min(1100px, calc(100vw - 3rem))', marginLeft: 'min(0px, calc((100% - min(1100px, calc(100vw - 3rem))) / 2))' }}>
           {/* Header + group-by tabs */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem', gap: '0.75rem', flexWrap: 'wrap' }}>
             <div>
@@ -397,7 +487,7 @@ export default function DashboardPage() {
 
           {/* Country view — card grid (default) */}
           {visitGroup === 'country' && (
-            <div style={{ columns: '4 240px', columnGap: '0.875rem' }}>
+            <div className="visit-grid" style={{ columns: '4 240px', columnGap: '0.875rem' }}>
               {countries.map((country, i) => (
                 <div
                   key={country.name}
@@ -467,7 +557,7 @@ export default function DashboardPage() {
                     <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text)' }}>{continent}</span>
                     <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{list.length} {list.length === 1 ? 'country' : 'countries'}</span>
                   </div>
-                  <div style={{ columns: '4 240px', columnGap: '0.875rem' }}>
+                  <div className="visit-grid" style={{ columns: '4 240px', columnGap: '0.875rem' }}>
                     {list.map((country, i) => (
                       <div
                         key={country.name}
@@ -536,7 +626,7 @@ export default function DashboardPage() {
 
       {/* Activity Preferences */}
       {prefs.length > 0 && (
-        <div className="fade-up d-300 glass" style={{ borderRadius: 'var(--radius-xl)', padding: '1.5rem', marginTop: '1.5rem' }}>
+        <div className="fade-up d-300 glass" data-tour="preferences" style={{ borderRadius: 'var(--radius-xl)', padding: '1.5rem', marginTop: '1.5rem' }}>
           <h2 style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '1.25rem' }}>
             Activity Preferences
           </h2>
@@ -591,7 +681,7 @@ export default function DashboardPage() {
           </div>
 
           <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-            <Link href="/scan" style={{ fontSize: '0.8rem', color: 'var(--text-accent)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            <Link href="/results" style={{ fontSize: '0.8rem', color: 'var(--text-accent)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
               onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
               onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
             >
@@ -607,7 +697,7 @@ export default function DashboardPage() {
       {/* Experiences popup */}
       {selectedCity && (
         <div
-          onClick={() => setSelectedCity(null)}
+          onClick={() => { setSelectedCity(null); setActiveKw(null) }}
           style={{
             position: 'fixed', inset: 0, zIndex: 50,
             background: 'rgba(0,0,0,0.45)',
@@ -618,7 +708,7 @@ export default function DashboardPage() {
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="glass fade-in"
+            className="glass fade-in modal-card"
             style={{
               borderRadius: 'var(--radius-xl)', padding: '1.75rem',
               width: '100%', maxWidth: 420,
@@ -642,27 +732,77 @@ export default function DashboardPage() {
               if (expLoading && !trips) {
                 return <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>Loading…</p>
               }
-              if (!trips || trips.flatMap(t => t.experiences).length === 0) {
+              const allExps = trips.flatMap(t => t.experiences)
+              if (!trips || allExps.every(e => e.keywords.length === 0)) {
                 return <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>No experiences detected for this trip.</p>
               }
               return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                   {trips.map((trip, i) => (
                     <div key={i}>
                       {trip.label && (
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.5rem', letterSpacing: '0.03em' }}>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.75rem', letterSpacing: '0.03em' }}>
                           {trip.label}
                         </div>
                       )}
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                        {trip.experiences.map(exp => (
-                          <span key={exp.category} style={{
-                            fontSize: '0.75rem', color: 'var(--text-accent)',
-                            background: 'rgba(0,212,170,0.1)', border: '1px solid rgba(0,212,170,0.3)',
-                            borderRadius: 'var(--radius-md)', padding: '0.3rem 0.7rem',
-                          }}>
-                            {CATEGORY_LABEL[exp.category] ?? exp.category.replace(/_/g, ' ')}
-                          </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                        {trip.experiences.filter(e => e.keywords.length > 0).map(exp => (
+                          <div key={exp.category}>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.3rem' }}>
+                              {CATEGORY_LABEL[exp.category] ?? exp.category.replace(/_/g, ' ')}
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                              {exp.keywords.map(({ keyword: kw, subjects }) => {
+                                const key = `${exp.category}:${kw}`
+                                const isActive = activeKw === key
+                                return (
+                                  <span
+                                    key={kw}
+                                    onClick={e => { e.stopPropagation(); setActiveKw(isActive ? null : key) }}
+                                    style={{
+                                      fontSize: '0.75rem', cursor: 'pointer',
+                                      color: isActive ? 'var(--bg)' : 'var(--text-accent)',
+                                      background: isActive ? 'rgba(0,212,170,0.85)' : 'rgba(0,212,170,0.1)',
+                                      border: '1px solid rgba(0,212,170,0.3)',
+                                      borderRadius: 'var(--radius-md)', padding: '0.25rem 0.6rem',
+                                      transition: 'background 0.15s, color 0.15s',
+                                    }}
+                                  >
+                                    {kw}
+                                  </span>
+                                )
+                              })}
+                            </div>
+                            {/* Source emails for the active keyword in this category */}
+                            {exp.keywords.map(({ keyword: kw, subjects }) => {
+                              const key = `${exp.category}:${kw}`
+                              if (activeKw !== key || subjects.length === 0) return null
+                              return (
+                                <div key={key} style={{
+                                  marginTop: '0.5rem',
+                                  padding: '0.6rem 0.75rem',
+                                  background: 'rgba(0,212,170,0.06)',
+                                  border: '1px solid rgba(0,212,170,0.15)',
+                                  borderRadius: 'var(--radius-md)',
+                                }}>
+                                  <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>
+                                    From your emails
+                                  </div>
+                                  {subjects.map((s, si) => (
+                                    <div key={si} style={{
+                                      fontSize: '0.75rem', color: 'var(--text)',
+                                      lineHeight: 1.4,
+                                      paddingTop: si > 0 ? '0.25rem' : 0,
+                                      borderTop: si > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                    }}>
+                                      {s}
+                                    </div>
+                                  ))}
+                                </div>
+                              )
+                            })}
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -672,7 +812,7 @@ export default function DashboardPage() {
             })()}
 
             <button
-              onClick={() => setSelectedCity(null)}
+              onClick={() => { setSelectedCity(null); setActiveKw(null) }}
               style={{
                 marginTop: '1.5rem', fontSize: '0.75rem', color: 'var(--text-muted)',
                 background: 'none', border: 'none', cursor: 'pointer', padding: 0,
@@ -693,6 +833,18 @@ export default function DashboardPage() {
             Scan Emails
           </Link>
         </div>
+      )}
+
+      {tourActive && (
+        <TourOverlay
+          steps={TOUR_STEPS}
+          onFinish={() => {
+            setTourActive(false)
+            setTourSeenCached(true)
+            postTourComplete().catch(() => {})
+            setMe(prev => prev ? { ...prev, has_seen_tour: true } : prev)
+          }}
+        />
       )}
     </div>
   )

@@ -9,7 +9,6 @@ from detection.config import (
     CONFIRMATION_REGEX,
     KEYWORD_ALIASES,
     TRAVEL_DOMAINS,
-    get_activity_signals,
 )
 
 _DESTINATION_PATTERNS = [
@@ -52,6 +51,17 @@ _DESTINATION_PATTERNS = [
 ]
 
 
+def extract_raw_domain(from_header: str) -> str | None:
+    """Return the bare domain after @ with no allowlist filtering."""
+    match = re.search(r"@([\w.\-]+)", from_header)
+    return match.group(1).lower() if match else None
+
+
+def extract_sender_email(from_header: str) -> str | None:
+    match = re.search(r"[\w.+\-]+@[\w.\-]+", from_header)
+    return match.group(0).lower() if match else None
+
+
 def extract_sender_domain(from_header: str) -> str | None:
     match = re.search(r"@([\w.\-]+)", from_header)
     if not match:
@@ -65,6 +75,18 @@ def extract_sender_domain(from_header: str) -> str | None:
 
 def is_confirmation(subject: str) -> bool:
     return bool(CONFIRMATION_REGEX.search(subject))
+
+
+_FWD_PREFIX = re.compile(r"^\s*(fw|fwd)\s*:\s*", re.IGNORECASE)
+
+_CANCELLATION_PREFIXES = re.compile(
+    r"^\s*(cancelad[oa]|cancelled|canceled|annulé|storniert|annullato)[:\s]",
+    re.IGNORECASE,
+)
+
+def is_cancellation(subject: str) -> bool:
+    stripped = _FWD_PREFIX.sub("", subject)
+    return bool(_CANCELLATION_PREFIXES.match(stripped))
 
 
 def extract_destination(text: str) -> str | None:
@@ -95,15 +117,13 @@ def decode_body(payload: dict) -> str:
     return ""
 
 
-def detect_activities(text: str) -> list[str]:
-    lower   = text.lower()
-    signals = get_activity_signals()
+def detect_activities(text: str, signals: dict[str, list[str]]) -> list[str]:
+    lower = text.lower()
     return [cat for cat, kws in signals.items() if any(kw in lower for kw in kws)]
 
 
-def detect_activity_keywords(text: str) -> dict[str, list[str]]:
-    lower   = text.lower()
-    signals = get_activity_signals()
+def detect_activity_keywords(text: str, signals: dict[str, list[str]]) -> dict[str, list[str]]:
+    lower  = text.lower()
     result: dict[str, list[str]] = {}
     for cat, kws in signals.items():
         seen: set[str] = set()
