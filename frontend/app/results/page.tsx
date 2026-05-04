@@ -258,6 +258,42 @@ function ScanResultsContent() {
       .finally(() => setLoading(false))
   }, [isScanView, fromParam, toParam])
 
+  // Derived data — must be before any early returns (Rules of Hooks)
+  const { profile, bookings: allBookings = [] } = data ?? { profile: null, bookings: [] }
+  const platforms = profile?.platforms ? Object.entries(profile.platforms) : []
+
+  const allPlatforms = useMemo(() =>
+    [...new Set(allBookings.map(b => b.domain).filter(Boolean))].sort()
+  , [allBookings])
+
+  useEffect(() => {
+    function onOutside(e: MouseEvent) {
+      if (platformFilterRef.current && !platformFilterRef.current.contains(e.target as Node))
+        setPlatformFilterOpen(false)
+    }
+    document.addEventListener('mousedown', onOutside)
+    return () => document.removeEventListener('mousedown', onOutside)
+  }, [])
+
+  useEffect(() => { setPage(1) }, [typeFilter, dateFilter, platformFilter, excludedIds])
+
+  const bookings = useMemo(() => {
+    const now = Date.now()
+    const MS = { month: 30, year: 365, '10years': 3650 }
+    const cutoff = dateFilter !== 'all' ? now - MS[dateFilter] * 86400_000 : null
+    return allBookings.filter(b => {
+      if (b.id && excludedIds.has(b.id)) return false
+      if (typeFilter === 'trip' && b.is_travel_booking !== true) return false
+      if (typeFilter === 'non-trip' && b.is_travel_booking === true) return false
+      if (cutoff !== null) {
+        const t = new Date(b.date).getTime()
+        if (isNaN(t) || t < cutoff) return false
+      }
+      if (platformFilter.size > 0 && !platformFilter.has(b.domain)) return false
+      return true
+    })
+  }, [allBookings, excludedIds, typeFilter, dateFilter, platformFilter])
+
   if (connected === false) return <AuthGate page="Results" />
 
   /* ── Loading ──────────────────────────────────────────────────── */
@@ -281,44 +317,6 @@ function ScanResultsContent() {
       </div>
     )
   }
-
-  const { profile, bookings: allBookings = [] } = data ?? { profile: null, bookings: [] }
-  const platforms = profile?.platforms ? Object.entries(profile.platforms) : []
-
-  // All unique domains for platform filter (from raw data, before any filters)
-  const allPlatforms = useMemo(() =>
-    [...new Set(allBookings.map(b => b.domain).filter(Boolean))].sort()
-  , [allBookings])
-
-  // Close platform filter dropdown on outside click
-  useEffect(() => {
-    function onOutside(e: MouseEvent) {
-      if (platformFilterRef.current && !platformFilterRef.current.contains(e.target as Node))
-        setPlatformFilterOpen(false)
-    }
-    document.addEventListener('mousedown', onOutside)
-    return () => document.removeEventListener('mousedown', onOutside)
-  }, [])
-
-  // Reset to page 1 whenever filters change
-  useEffect(() => { setPage(1) }, [typeFilter, dateFilter, platformFilter, excludedIds])
-
-  const bookings = useMemo(() => {
-    const now = Date.now()
-    const MS = { month: 30, year: 365, '10years': 3650 }
-    const cutoff = dateFilter !== 'all' ? now - MS[dateFilter] * 86400_000 : null
-    return allBookings.filter(b => {
-      if (b.id && excludedIds.has(b.id)) return false
-      if (typeFilter === 'trip' && b.is_travel_booking !== true) return false
-      if (typeFilter === 'non-trip' && b.is_travel_booking === true) return false
-      if (cutoff !== null) {
-        const t = new Date(b.date).getTime()
-        if (isNaN(t) || t < cutoff) return false
-      }
-      if (platformFilter.size > 0 && !platformFilter.has(b.domain)) return false
-      return true
-    })
-  }, [allBookings, excludedIds, typeFilter, dateFilter, platformFilter])
 
   const PAGE_SIZE = 25
   const totalPages = Math.max(1, Math.ceil(bookings.length / PAGE_SIZE))
