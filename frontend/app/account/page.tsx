@@ -658,12 +658,26 @@ export default function AccountPage() {
             Emails in these labels are skipped during scanning.
           </p>
 
-          {/* Standard checkboxes */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', marginBottom: '1.25rem' }}>
+          {/* Standard checkboxes — horizontal wrap */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.25rem' }}>
             {(['promotions', 'spam', 'social', 'forums'] as const).map(key => (
-              <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.83rem', color: 'var(--text)' }}>
+              <label
+                key={key}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                  padding: '0.3rem 0.7rem',
+                  borderRadius: 'var(--radius-md)',
+                  border: `1px solid ${excludeFilters[key] ? 'rgba(0,212,170,0.35)' : 'var(--border)'}`,
+                  background: excludeFilters[key] ? 'rgba(0,212,170,0.07)' : 'transparent',
+                  cursor: 'pointer', fontSize: '0.82rem',
+                  color: excludeFilters[key] ? 'var(--text)' : 'var(--text-muted)',
+                  transition: 'border-color 150ms, background 150ms',
+                  userSelect: 'none',
+                }}
+              >
                 <input
                   type="checkbox"
+                  className="trip-checkbox"
                   checked={!!excludeFilters[key]}
                   onChange={e => setExcludeFilters(f => ({ ...f, [key]: e.target.checked }))}
                 />
@@ -672,19 +686,38 @@ export default function AccountPage() {
             ))}
           </div>
 
-          {/* Custom labels */}
+          {/* Custom label tags — horizontal wrap */}
           {customLabels.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '1rem' }}>
               {customLabels.map((lbl, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '0.83rem', color: 'var(--text)' }}>{lbl}</span>
+                <span
+                  key={i}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                    padding: '0.25rem 0.5rem 0.25rem 0.65rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid var(--border)',
+                    fontSize: '0.78rem', color: 'var(--text)',
+                  }}
+                >
+                  {lbl}
                   <button
                     onClick={() => setCustomLabels(prev => prev.filter((_, idx) => idx !== i))}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.75rem', padding: '0.15rem 0.4rem' }}
+                    aria-label={`Remove ${lbl}`}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: 16, height: 16, padding: 0,
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      color: 'var(--text-muted)', borderRadius: '50%',
+                      lineHeight: 1, fontSize: '0.75rem',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#f87171' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
                   >
-                    Remove
+                    ✕
                   </button>
-                </div>
+                </span>
               ))}
             </div>
           )}
