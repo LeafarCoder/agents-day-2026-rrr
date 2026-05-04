@@ -3,6 +3,7 @@ import { Playfair_Display, DM_Sans } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import LocalTitle from "@/components/LocalTitle";
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -34,9 +35,9 @@ export default function RootLayout({
         <meta name="google-site-verification" content="rjCbZUahoNRPYhMkUPmC4n3ymWTQQdapKC_mqi41lAs" />
         {/* Apply saved theme before first paint to prevent flash */}
         <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}` }} />
-        <script dangerouslySetInnerHTML={{ __html: `if(location.hostname==='localhost'||location.hostname==='127.0.0.1')document.title+=' (local)'` }} />
       </head>
       <body>
+        <LocalTitle />
         <Navbar />
         <main>{children}</main>
         <footer style={{ textAlign: 'center', padding: '1.5rem', borderTop: '1px solid var(--border)' }}>
