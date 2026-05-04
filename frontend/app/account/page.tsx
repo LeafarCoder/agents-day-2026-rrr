@@ -51,6 +51,7 @@ export default function AccountPage() {
   const [labelsSaving, setLabelsSaving] = useState(false)
   const [labelsSaved, setLabelsSaved] = useState(false)
   const [labelsError, setLabelsError] = useState<string | null>(null)
+  const [labelsModified, setLabelsModified] = useState(false)
 
   // Delete state
   const [deleting, setDeleting] = useState(false)
@@ -132,6 +133,7 @@ export default function AccountPage() {
         setLabelsError(d.detail ?? `Error ${r.status}`)
       } else {
         setLabelsSaved(true)
+        setLabelsModified(false)
         setTimeout(() => setLabelsSaved(false), 2500)
       }
     } catch {
@@ -679,7 +681,7 @@ export default function AccountPage() {
                   type="checkbox"
                   className="trip-checkbox"
                   checked={!!excludeFilters[key]}
-                  onChange={e => setExcludeFilters(f => ({ ...f, [key]: e.target.checked }))}
+                  onChange={e => { setExcludeFilters(f => ({ ...f, [key]: e.target.checked })); setLabelsModified(true) }}
                 />
                 {key.charAt(0).toUpperCase() + key.slice(1)}
               </label>
@@ -703,7 +705,7 @@ export default function AccountPage() {
                 >
                   {lbl}
                   <button
-                    onClick={() => setCustomLabels(prev => prev.filter((_, idx) => idx !== i))}
+                    onClick={() => { setCustomLabels(prev => prev.filter((_, idx) => idx !== i)); setLabelsModified(true) }}
                     aria-label={`Remove ${lbl}`}
                     style={{
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -736,6 +738,7 @@ export default function AccountPage() {
                   if (t && !customLabels.includes(t) && !STANDARD_LABELS.includes(t as typeof STANDARD_LABELS[number])) {
                     setCustomLabels(prev => [...prev, t])
                     setNewLabelInput('')
+                    setLabelsModified(true)
                   }
                 }
               }}
@@ -749,6 +752,7 @@ export default function AccountPage() {
                 if (t && !customLabels.includes(t) && !STANDARD_LABELS.includes(t as typeof STANDARD_LABELS[number])) {
                   setCustomLabels(prev => [...prev, t])
                   setNewLabelInput('')
+                  setLabelsModified(true)
                 }
               }}
             >
@@ -756,6 +760,11 @@ export default function AccountPage() {
             </button>
           </div>
 
+          {labelsModified && (
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0 0 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <span style={{ color: '#f59e0b' }}>⚠</span> Click Save to apply your changes.
+            </p>
+          )}
           <button
             className="btn btn-primary"
             style={{ fontSize: '0.82rem' }}
