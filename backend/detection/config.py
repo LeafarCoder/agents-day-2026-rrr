@@ -125,11 +125,20 @@ def _save_custom(data: dict[str, list[str]]) -> None:
 
 
 def get_merged_signals(user_custom: dict | None = None) -> dict[str, list[str]]:
-    """Merge defaults with per-user custom signals."""
-    merged = {k: list(v) for k, v in _DEFAULT_ACTIVITY_SIGNALS.items()}
-    for cat, keywords in (user_custom or {}).items():
+    """Merge defaults with per-user custom signals, honoring removed defaults."""
+    custom = user_custom or {}
+    removed = custom.get('__removed__', {})
+    merged: dict[str, list[str]] = {}
+    for cat, kws in _DEFAULT_ACTIVITY_SIGNALS.items():
+        excluded = set(removed.get(cat, []))
+        merged[cat] = [kw for kw in kws if kw not in excluded]
+    for cat, keywords in custom.items():
+        if cat.startswith('__'):
+            continue
         if cat in merged:
-            merged[cat] = list(dict.fromkeys(merged[cat] + keywords))
+            for kw in keywords:
+                if kw not in merged[cat]:
+                    merged[cat].append(kw)
         else:
             merged[cat] = list(keywords)
     return merged

@@ -313,7 +313,7 @@ export default function CategoriesPage() {
                       <KwTag
                         key={kw}
                         keyword={kw}
-                        canDelete={!isDemo && (!isDefault || customKws.includes(kw))}
+                        canDelete={!isDemo}
                         onDelete={() => deleteKeyword(category, kw)}
                       />
                     ))}

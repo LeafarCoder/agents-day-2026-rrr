@@ -29,7 +29,7 @@ def preferences(request: Request):
     return {
         "signals": merged,
         "defaults": list(det_config._DEFAULT_ACTIVITY_SIGNALS.keys()),
-        "custom": user_custom,
+        "custom": {k: v for k, v in user_custom.items() if not k.startswith('__')},
     }
 
 
@@ -77,6 +77,12 @@ def create_keyword(request: Request, category: str = Form(...), keyword: str = F
     if not keyword or not category:
         return {"ok": True}
     custom = reader.get_user_signals(user_email)
+    # If it was previously removed from defaults, un-remove it
+    removed = custom.get('__removed__', {})
+    if keyword in removed.get(category, []):
+        removed[category].remove(keyword)
+        writer.save_user_signals(user_email, custom)
+        return {"ok": True}
     if keyword not in det_config._DEFAULT_ACTIVITY_SIGNALS.get(category, []):
         bucket = custom.setdefault(category, [])
         if keyword not in bucket:
@@ -97,10 +103,15 @@ def delete_keyword(
     if err:
         return err
     keyword = keyword.strip().lower()
-    if keyword in det_config._DEFAULT_ACTIVITY_SIGNALS.get(category, []):
-        return JSONResponse({"error": "cannot_delete_default_keyword"}, status_code=400)
     custom = reader.get_user_signals(user_email)
-    if category in custom and keyword in custom[category]:
-        custom[category].remove(keyword)
-        writer.save_user_signals(user_email, custom)
+    if keyword in det_config._DEFAULT_ACTIVITY_SIGNALS.get(category, []):
+        # Record as a removed default rather than hard-deleting
+        bucket = custom.setdefault('__removed__', {}).setdefault(category, [])
+        if keyword not in bucket:
+            bucket.append(keyword)
+            writer.save_user_signals(user_email, custom)
+    else:
+        if category in custom and keyword in custom[category]:
+            custom[category].remove(keyword)
+            writer.save_user_signals(user_email, custom)
     return {"ok": True}
