@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { API_URL } from '@/lib/api'
 import { useIsMobile } from '@/lib/useIsMobile'
+import AuthGate from '@/components/AuthGate'
 
 type Booking = {
   id: string | null
@@ -185,6 +186,7 @@ function ScanResultsContent() {
   const toParam   = searchParams.get('to')
   const isScanView = !!(fromParam && toParam)
 
+  const [connected, setConnected] = useState<boolean | null>(null)
   const [data, setData] = useState<ScanData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -230,15 +232,22 @@ function ScanResultsContent() {
       ? `${API_URL}/api/scan?from_date=${fromParam}&to_date=${toParam}`
       : `${API_URL}/api/scan`
 
+    fetch(`${API_URL}/api/me`, { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setConnected(d?.connected ?? false))
+      .catch(() => setConnected(false))
+
     fetch(url, { credentials: 'include' })
       .then(r => {
-        if (r.status === 401) { window.location.href = '/'; return null }
+        if (r.status === 401) { setConnected(false); return null }
         return r.json()
       })
       .then(d => { if (d) setData(d) })
       .catch(() => setError('Failed to load results.'))
       .finally(() => setLoading(false))
   }, [isScanView, fromParam, toParam])
+
+  if (connected === false) return <AuthGate page="Results" />
 
   /* ── Loading ──────────────────────────────────────────────────── */
   if (loading) {

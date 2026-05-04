@@ -6,8 +6,10 @@ import { API_URL } from '@/lib/api'
 import { postTourReset, setTourSeenCached } from '@/lib/tour'
 import { COUNTRIES } from '@/lib/countries'
 import { useIsMobile } from '@/lib/useIsMobile'
+import AuthGate from '@/components/AuthGate'
 
 export default function AccountPage() {
+  const [connected, setConnected] = useState<boolean | null>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [isDemo, setIsDemo] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -58,6 +60,7 @@ export default function AccountPage() {
     fetch(`${API_URL}/api/me`, { credentials: 'include' })
       .then(r => r.json())
       .then(d => {
+        setConnected(d.connected ?? false)
         setUserEmail(d.user_email ?? null)
         setIsDemo(d.demo ?? false)
         setDisplayName(d.display_name ?? '')
@@ -247,6 +250,8 @@ export default function AccountPage() {
       setDeleting(false)
     }
   }
+
+  if (connected === false) return <AuthGate page="Account" />
 
   if (loading) {
     return (

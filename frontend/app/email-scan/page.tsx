@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { API_URL } from '@/lib/api'
+import AuthGate from '@/components/AuthGate'
 
 type ScanStep = { step: string; msg: string; current?: number; total?: number; cached?: boolean }
 
@@ -155,30 +156,8 @@ export default function EmailScanPage() {
     )
   }
 
-  if (isDemo) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <div className="glass-subtle" style={{ textAlign: 'center', borderRadius: 'var(--radius-xl)', padding: '2.5rem 2rem', maxWidth: 420 }}>
-          <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🔒</div>
-          <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.5rem' }}>Scanning unavailable in demo mode</h2>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-            Sign in with your own Gmail account to scan your travel emails.
-          </p>
-          <a href={`${API_URL}/auth`} className="btn btn-primary" style={{ fontSize: '0.9rem' }}>Sign In</a>
-        </div>
-      </div>
-    )
-  }
-
-  if (!connected) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <div style={{ textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>Connect Gmail to scan your emails.</p>
-          <a href={`${API_URL}/auth`} className="btn btn-primary">Connect Gmail</a>
-        </div>
-      </div>
-    )
+  if (isDemo || !connected) {
+    return <AuthGate page="Scan" />
   }
 
   const parsingEmails = steps.filter(s => s.step === 'parsing')

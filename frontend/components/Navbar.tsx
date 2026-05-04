@@ -17,6 +17,7 @@ const NAV_LINKS = [
 
 export default function Navbar() {
   const [isDemo, setIsDemo] = useState(false);
+  const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
   const pathname = usePathname();
@@ -24,8 +25,11 @@ export default function Navbar() {
   useEffect(() => {
     fetch(`${API_URL}/api/me`, { credentials: "include" })
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.demo) setIsDemo(true) })
-      .catch(() => {})
+      .then(d => {
+        if (d?.demo) setIsDemo(true);
+        setIsConnected(d?.connected ?? false);
+      })
+      .catch(() => { setIsConnected(false); })
   }, []);
 
   // Close drawer on route change
@@ -107,7 +111,27 @@ export default function Navbar() {
         >
           {brand}
 
-          {isMobile ? (
+          {isConnected === false ? (
+            /* ── Unauthenticated: only Sign In + theme toggle ── */
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <a
+                href={`${API_URL}/auth`}
+                style={{
+                  padding: "0.35rem 0.8rem",
+                  borderRadius: "var(--radius-md)",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                  color: "var(--text-accent)",
+                  border: "1px solid var(--border-accent)",
+                  textDecoration: "none",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Sign In →
+              </a>
+              <ThemeToggle />
+            </div>
+          ) : isMobile ? (
             /* ── Hamburger button (mobile) ── */
             <button
               onClick={() => setOpen(o => !o)}
@@ -175,7 +199,7 @@ export default function Navbar() {
                 </Link>
               ))}
 
-              {isDemo && (
+              {(isDemo || isConnected === false) && (
                 <>
                   <div style={{ width: "1px", height: 18, background: "var(--border)", margin: "0 0.25rem" }} aria-hidden="true" />
                   <a
@@ -297,8 +321,8 @@ export default function Navbar() {
               <ThemeToggle />
             </div>
 
-            {/* Demo sign-in CTA */}
-            {isDemo && (
+            {/* Sign-in CTA for unauthenticated and demo users */}
+            {(isDemo || isConnected === false) && (
               <>
                 <div style={{ height: 1, background: "var(--border)", margin: "1rem 0" }} />
                 <a

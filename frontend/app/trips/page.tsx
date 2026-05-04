@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, Fragment } from 'react'
 import { API_URL } from '@/lib/api'
+import AuthGate from '@/components/AuthGate'
 
 type Trip = {
   id: string
@@ -59,6 +60,7 @@ function getPageNumbers(current: number, total: number): (number | '...')[] {
 const PAGE_SIZE = 25
 
 export default function TripsPage() {
+  const [connected, setConnected] = useState<boolean | null>(null)
   const [trips, setTrips] = useState<Trip[]>([])
   const [candidates, setCandidates] = useState<MergeCandidate[]>([])
   const [loading, setLoading] = useState(true)
@@ -116,7 +118,10 @@ export default function TripsPage() {
       }
       if (meRes.ok) {
         const me = await meRes.json()
+        setConnected(me.connected ?? false)
         setUserEmail(me.user_email ?? null)
+      } else {
+        setConnected(false)
       }
     } catch {
       setError('Failed to load trips. Are you signed in?')
@@ -260,6 +265,8 @@ export default function TripsPage() {
   }
 
   const showMergeModal = mergeTrips.length >= 2
+
+  if (connected === false) return <AuthGate page="Trips" />
 
   if (loading) return (
     <div style={{ padding: '88px 1.5rem 4rem', maxWidth: 840, margin: '0 auto' }}>
