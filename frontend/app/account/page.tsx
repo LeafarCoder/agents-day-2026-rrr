@@ -313,7 +313,7 @@ export default function AccountPage() {
         {/* Display name */}
         <div style={{ marginBottom: '1rem' }}>
           <label htmlFor="display-name" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
-            Name
+            First name
           </label>
           <input
             id="display-name"
