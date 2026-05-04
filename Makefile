@@ -13,10 +13,10 @@ help:
 
 backend-install:
 	~/.pyenv/versions/3.12.3/bin/python3.12 -m venv venv --clear
-	venv/bin/python3 -m pip install -r requirements.txt
+	venv/bin/python3 -m pip install -r backend/requirements.txt
 
 backend-start:
-	venv/bin/uvicorn api.main:app --reload --port 8042
+	cd backend && ../venv/bin/uvicorn api.main:app --reload --port 8042
 
 frontend-install:
 	cd frontend && pnpm install --ignore-scripts

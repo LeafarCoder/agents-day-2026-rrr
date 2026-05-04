@@ -1,12 +1,12 @@
 services:
   backend:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     ports:
       - "${BACKEND_PORT:-8042}:8042"
     volumes:
-      - ./credentials.json:/app/credentials.json:ro
+      - ./backend/credentials.json:/app/credentials.json:ro
       - msgvault_home:/root/.msgvault
       - app_data:/app/data
     env_file:
