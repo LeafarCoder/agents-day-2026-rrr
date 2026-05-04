@@ -6,10 +6,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bash curl ca-certificates sqlite3 && \
     rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY backend/ .
 
 # Prefer a checked-in Linux binary if present; otherwise install msgvault at build time.
 RUN if [ -f bin/msgvault-linux ]; then \
