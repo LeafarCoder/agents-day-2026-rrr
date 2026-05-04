@@ -3,7 +3,6 @@ import { Playfair_Display, DM_Sans } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
-import LocalTitle from "@/components/LocalTitle";
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -19,8 +18,10 @@ const dmSans = DM_Sans({
   display: "swap",
 });
 
+const isLocal = process.env.NEXT_PUBLIC_APP_ENV === 'local'
+
 export const metadata: Metadata = {
-  title: "Travel DNA",
+  title: isLocal ? "Travel DNA (local)" : "Travel DNA",
   description: "Scan your Gmail to uncover your travel DNA.",
 };
 
@@ -37,7 +38,6 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}` }} />
       </head>
       <body>
-        <LocalTitle />
         <Navbar />
         <main>{children}</main>
         <footer style={{ textAlign: 'center', padding: '1.5rem', borderTop: '1px solid var(--border)' }}>
