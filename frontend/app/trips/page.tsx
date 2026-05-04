@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, Fragment } from 'react'
 import { API_URL } from '@/lib/api'
 import AuthGate from '@/components/AuthGate'
+import SelectBox from '@/components/SelectBox'
 
 type Trip = {
   id: string
@@ -378,10 +379,9 @@ export default function TripsPage() {
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 <th style={{ padding: '0.6rem 0.75rem 0.6rem 1rem', width: 36, textAlign: 'center' }}>
-                  <input
-                    type="checkbox"
+                  <SelectBox
                     checked={allPageSelected}
-                    ref={el => { if (el) el.indeterminate = !allPageSelected && somePageSelected }}
+                    indeterminate={!allPageSelected && somePageSelected}
                     onChange={() => {
                       if (allPageSelected) {
                         setSelectedIds(prev => { const n = new Set(prev); pageTrips.forEach(t => n.delete(t.id)); return n })
@@ -389,7 +389,6 @@ export default function TripsPage() {
                         setSelectedIds(prev => { const n = new Set(prev); pageTrips.forEach(t => n.add(t.id)); return n })
                       }
                     }}
-                    className="trip-checkbox"
                   />
                 </th>
                 {([['title', 'Title'], ['start_date', 'Dates'], ['email_count', 'Emails']] as const).map(([key, label]) => (
@@ -416,14 +415,10 @@ export default function TripsPage() {
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
                     <td style={{ padding: '0.5rem 0.75rem 0.5rem 1rem', textAlign: 'center' }}>
-                      <input
-                        type="checkbox"
+                      <SelectBox
                         checked={selectedIds.has(trip.id)}
-                        onChange={() => {
-                          setSelectedIds(prev => { const n = new Set(prev); n.has(trip.id) ? n.delete(trip.id) : n.add(trip.id); return n })
-                        }}
+                        onChange={() => setSelectedIds(prev => { const n = new Set(prev); n.has(trip.id) ? n.delete(trip.id) : n.add(trip.id); return n })}
                         onClick={e => e.stopPropagation()}
-                        className="trip-checkbox"
                       />
                     </td>
                     <td style={{ padding: '0.75rem 1rem', color: 'var(--text)', fontWeight: 500, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

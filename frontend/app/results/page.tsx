@@ -1,11 +1,12 @@
 'use client'
 
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useRef, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { API_URL } from '@/lib/api'
 import { useIsMobile } from '@/lib/useIsMobile'
 import AuthGate from '@/components/AuthGate'
+import SelectBox from '@/components/SelectBox'
 
 type Booking = {
   id: string | null
@@ -198,6 +199,16 @@ function ScanResultsContent() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const isMobile = useIsMobile()
 
+  // Filters
+  type TypeFilter = 'all' | 'trip' | 'non-trip'
+  type DateFilter = 'all' | 'month' | 'year' | '10years'
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all')
+  const [platformFilter, setPlatformFilter] = useState<Set<string>>(new Set())
+  const [platformFilterSearch, setPlatformFilterSearch] = useState('')
+  const [platformFilterOpen, setPlatformFilterOpen] = useState(false)
+  const platformFilterRef = useRef<HTMLDivElement>(null)
+
   async function excludeBooking(id: string) {
     setExcludedIds(prev => new Set(prev).add(id))
     try {
@@ -274,7 +285,40 @@ function ScanResultsContent() {
   const { profile, bookings: allBookings = [] } = data ?? { profile: null, bookings: [] }
   const platforms = profile?.platforms ? Object.entries(profile.platforms) : []
 
-  const bookings = allBookings.filter(b => !b.id || !excludedIds.has(b.id))
+  // All unique domains for platform filter (from raw data, before any filters)
+  const allPlatforms = useMemo(() =>
+    [...new Set(allBookings.map(b => b.domain).filter(Boolean))].sort()
+  , [allBookings])
+
+  // Close platform filter dropdown on outside click
+  useEffect(() => {
+    function onOutside(e: MouseEvent) {
+      if (platformFilterRef.current && !platformFilterRef.current.contains(e.target as Node))
+        setPlatformFilterOpen(false)
+    }
+    document.addEventListener('mousedown', onOutside)
+    return () => document.removeEventListener('mousedown', onOutside)
+  }, [])
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => { setPage(1) }, [typeFilter, dateFilter, platformFilter, excludedIds])
+
+  const bookings = useMemo(() => {
+    const now = Date.now()
+    const MS = { month: 30, year: 365, '10years': 3650 }
+    const cutoff = dateFilter !== 'all' ? now - MS[dateFilter] * 86400_000 : null
+    return allBookings.filter(b => {
+      if (b.id && excludedIds.has(b.id)) return false
+      if (typeFilter === 'trip' && b.is_travel_booking !== true) return false
+      if (typeFilter === 'non-trip' && b.is_travel_booking === true) return false
+      if (cutoff !== null) {
+        const t = new Date(b.date).getTime()
+        if (isNaN(t) || t < cutoff) return false
+      }
+      if (platformFilter.size > 0 && !platformFilter.has(b.domain)) return false
+      return true
+    })
+  }, [allBookings, excludedIds, typeFilter, dateFilter, platformFilter])
 
   const PAGE_SIZE = 25
   const totalPages = Math.max(1, Math.ceil(bookings.length / PAGE_SIZE))
@@ -396,9 +440,10 @@ function ScanResultsContent() {
 
       {/* Bookings table */}
       <div className="fade-up d-300 glass" style={{ borderRadius: 'var(--radius-xl)', overflow: 'hidden' }}>
+        {/* Header row */}
         <div style={{ padding: '1.25rem 1.5rem 0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
           <h2 style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>
-            Emails <span style={{ fontWeight: 400, opacity: 0.6 }}>({bookings.length})</span>
+            Emails <span style={{ fontWeight: 400, opacity: 0.6 }}>({bookings.length}{bookings.length !== allBookings.length ? ` of ${allBookings.length}` : ''})</span>
           </h2>
           {selectedIds.size > 0 && (
             <button
@@ -426,15 +471,119 @@ function ScanResultsContent() {
           )}
         </div>
 
+        {/* Filter bar */}
+        <div style={{ padding: '0 1.5rem 1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', borderBottom: '1px solid var(--border)' }}>
+          {/* Type filter */}
+          <div style={{ display: 'flex', gap: '0.2rem', background: 'rgba(255,255,255,0.04)', borderRadius: 'var(--radius-md)', padding: '0.2rem' }}>
+            {([['all', 'All'], ['trip', 'Trip'], ['non-trip', 'Non-trip']] as [TypeFilter, string][]).map(([v, label]) => (
+              <button key={v} onClick={() => setTypeFilter(v)} style={{
+                fontSize: '0.72rem', padding: '0.2rem 0.6rem', borderRadius: 'calc(var(--radius-md) - 2px)',
+                border: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
+                background: typeFilter === v ? 'rgba(0,212,170,0.15)' : 'transparent',
+                color: typeFilter === v ? 'var(--text-accent)' : 'var(--text-muted)',
+                fontWeight: typeFilter === v ? 600 : 400,
+                transition: 'all 140ms',
+              }}>{label}</button>
+            ))}
+          </div>
+
+          {/* Date filter */}
+          <div style={{ display: 'flex', gap: '0.2rem', background: 'rgba(255,255,255,0.04)', borderRadius: 'var(--radius-md)', padding: '0.2rem' }}>
+            {([['all', 'All time'], ['month', 'Month'], ['year', 'Year'], ['10years', '10 y']] as [DateFilter, string][]).map(([v, label]) => (
+              <button key={v} onClick={() => setDateFilter(v)} style={{
+                fontSize: '0.72rem', padding: '0.2rem 0.6rem', borderRadius: 'calc(var(--radius-md) - 2px)',
+                border: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
+                background: dateFilter === v ? 'rgba(0,212,170,0.15)' : 'transparent',
+                color: dateFilter === v ? 'var(--text-accent)' : 'var(--text-muted)',
+                fontWeight: dateFilter === v ? 600 : 400,
+                transition: 'all 140ms',
+              }}>{label}</button>
+            ))}
+          </div>
+
+          {/* Platform multi-select */}
+          <div ref={platformFilterRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setPlatformFilterOpen(o => !o)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                fontSize: '0.72rem', padding: '0.3rem 0.7rem',
+                borderRadius: 'var(--radius-md)', cursor: 'pointer',
+                background: platformFilter.size > 0 ? 'rgba(0,212,170,0.12)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${platformFilter.size > 0 ? 'rgba(0,212,170,0.35)' : 'rgba(255,255,255,0.08)'}`,
+                color: platformFilter.size > 0 ? 'var(--text-accent)' : 'var(--text-muted)',
+                transition: 'all 140ms', whiteSpace: 'nowrap',
+              }}
+            >
+              {platformFilter.size > 0 ? `${platformFilter.size} platform${platformFilter.size > 1 ? 's' : ''}` : 'Platforms'}
+              {platformFilter.size > 0 && (
+                <span
+                  onClick={e => { e.stopPropagation(); setPlatformFilter(new Set()) }}
+                  style={{ marginLeft: 2, opacity: 0.7, fontSize: '0.65rem', lineHeight: 1 }}
+                >✕</span>
+              )}
+              {platformFilter.size === 0 && <span style={{ opacity: 0.5, fontSize: '0.6rem' }}>▾</span>}
+            </button>
+
+            {platformFilterOpen && (
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 30,
+                minWidth: 220, maxWidth: 280,
+                background: 'var(--nav-surface)', backdropFilter: 'blur(20px)',
+                border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
+                overflow: 'hidden',
+              }}>
+                <div style={{ padding: '0.5rem' }}>
+                  <input
+                    autoFocus
+                    placeholder="Search platforms…"
+                    value={platformFilterSearch}
+                    onChange={e => setPlatformFilterSearch(e.target.value)}
+                    style={{
+                      width: '100%', boxSizing: 'border-box',
+                      padding: '0.35rem 0.6rem', fontSize: '0.75rem',
+                      background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-md)', color: 'var(--text)', outline: 'none',
+                    }}
+                  />
+                </div>
+                <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+                  {allPlatforms
+                    .filter(p => p.toLowerCase().includes(platformFilterSearch.toLowerCase()))
+                    .map(p => (
+                      <label key={p} style={{
+                        display: 'flex', alignItems: 'center', gap: '0.5rem',
+                        padding: '0.4rem 0.75rem', cursor: 'pointer',
+                        background: platformFilter.has(p) ? 'rgba(0,212,170,0.07)' : 'transparent',
+                        transition: 'background 120ms',
+                      }}>
+                        <SelectBox
+                          checked={platformFilter.has(p)}
+                          onChange={() => setPlatformFilter(prev => {
+                            const n = new Set(prev)
+                            n.has(p) ? n.delete(p) : n.add(p)
+                            return n
+                          })}
+                        />
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p}</span>
+                      </label>
+                    ))
+                  }
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="scroll-x" style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 <th style={{ padding: '0.6rem 0.75rem 0.6rem 1rem', width: 36, textAlign: 'center' }}>
-                  <input
-                    type="checkbox"
+                  <SelectBox
                     checked={allPageSelected}
-                    ref={el => { if (el) el.indeterminate = !allPageSelected && somePageSelected }}
+                    indeterminate={!allPageSelected && somePageSelected}
                     onChange={() => {
                       if (allPageSelected) {
                         setSelectedIds(prev => {
@@ -450,7 +599,6 @@ function ScanResultsContent() {
                         })
                       }
                     }}
-                    style={{ cursor: 'pointer', accentColor: 'var(--text-accent)' }}
                   />
                 </th>
                 {['Date', 'Destination', 'Subject'].map(h => (
@@ -475,18 +623,14 @@ function ScanResultsContent() {
                 >
                   <td style={{ padding: '0.4rem 0.75rem 0.4rem 1rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
                     {b.id && (
-                      <input
-                        type="checkbox"
+                      <SelectBox
                         checked={selectedIds.has(b.id)}
-                        onChange={() => {
-                          setSelectedIds(prev => {
-                            const next = new Set(prev)
-                            next.has(b.id!) ? next.delete(b.id!) : next.add(b.id!)
-                            return next
-                          })
-                        }}
+                        onChange={() => setSelectedIds(prev => {
+                          const next = new Set(prev)
+                          next.has(b.id!) ? next.delete(b.id!) : next.add(b.id!)
+                          return next
+                        })}
                         onClick={e => e.stopPropagation()}
-                        style={{ cursor: 'pointer', accentColor: 'var(--text-accent)' }}
                       />
                     )}
                   </td>
