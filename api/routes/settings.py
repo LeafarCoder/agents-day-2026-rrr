@@ -56,17 +56,17 @@ def save_openrouter_key(payload: KeyPayload, request: Request):
 
     try:
         resp = httpx.get(
-            "https://openrouter.ai/api/v1/models",
+            "https://openrouter.ai/api/v1/auth/key",
             headers={"Authorization": f"Bearer {key}"},
             timeout=10.0,
         )
-        if resp.status_code == 401:
-            return JSONResponse({"error": "invalid_key", "detail": "Key was rejected by OpenRouter."}, status_code=400)
+        if resp.status_code in (401, 403):
+            return JSONResponse({"error": "invalid_key", "detail": "This API key was not recognised by OpenRouter. Please check and try again."}, status_code=400)
         resp.raise_for_status()
     except httpx.TimeoutException:
-        return JSONResponse({"error": "validation_timeout", "detail": "Could not reach OpenRouter to validate the key."}, status_code=503)
+        return JSONResponse({"error": "validation_timeout", "detail": "Could not reach OpenRouter to validate the key. Please try again."}, status_code=503)
     except httpx.HTTPStatusError as exc:
-        return JSONResponse({"error": "openrouter_error", "detail": str(exc)}, status_code=502)
+        return JSONResponse({"error": "openrouter_error", "detail": f"OpenRouter returned an unexpected error: {exc.response.status_code}."}, status_code=502)
 
     writer.set_openrouter_key(user_email, key)
     return {"ok": True}
