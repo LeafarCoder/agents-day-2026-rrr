@@ -34,6 +34,7 @@ export default function RootLayout({
         <meta name="google-site-verification" content="rjCbZUahoNRPYhMkUPmC4n3ymWTQQdapKC_mqi41lAs" />
         {/* Apply saved theme before first paint to prevent flash */}
         <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}` }} />
+        <script dangerouslySetInnerHTML={{ __html: `if(location.hostname==='localhost'||location.hostname==='127.0.0.1')document.title+=' (local)'` }} />
       </head>
       <body>
         <Navbar />
