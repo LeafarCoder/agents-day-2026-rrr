@@ -10,7 +10,7 @@ services:
       - msgvault_home:/root/.msgvault
       - app_data:/app/data
     env_file:
-      - path: .env
+      - path: backend/.env
         required: false
     environment:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3042}
