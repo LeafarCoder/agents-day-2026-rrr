@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { API_URL } from '@/lib/api'
 
-type ScanStep = { step: string; msg: string; current?: number; total?: number }
+type ScanStep = { step: string; msg: string; current?: number; total?: number; cached?: boolean }
 
 const STEP_ORDER = ['auth', 'fetching', 'parsing', 'profiling', 'saving', 'done']
 
@@ -16,7 +17,7 @@ export default function EmailScanPage() {
   const [currentStep, setCurrentStep] = useState('')
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
-  const [scanError, setScanError] = useState('')
+  const [scanError, setScanError] = useState<React.ReactNode>('')
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [emailsExpanded, setEmailsExpanded] = useState(false)
   const [excludeFilters, setExcludeFilters] = useState({
@@ -83,7 +84,23 @@ export default function EmailScanPage() {
         es.close()
         setScanning(false)
         if (event.msg === 'openrouter_key_missing') {
-          setScanError('No OpenRouter key configured. Go to your profile and add your API key first.')
+          setScanError(
+            <>
+              No OpenRouter key configured. Go to your{' '}
+              <Link
+                href="/account"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#f87171', fontWeight: 500, textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
+              >
+                account
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+                  <path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7M7 1h4m0 0v4m0-4L5.5 6.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </Link>
+              {' '}and add your API key first.
+            </>
+          )
         } else {
           setScanError(event.msg)
         }
@@ -207,12 +224,7 @@ export default function EmailScanPage() {
                 <input
                   type="date"
                   value={fromDate}
-                  max={toDate || undefined}
-                  onChange={e => {
-                    const v = e.target.value
-                    setFromDate(v)
-                    if (toDate && v > toDate) setToDate(v)
-                  }}
+                  onChange={e => setFromDate(e.target.value)}
                   className="input"
                 />
               </div>
@@ -221,12 +233,7 @@ export default function EmailScanPage() {
                 <input
                   type="date"
                   value={toDate}
-                  min={fromDate || undefined}
-                  onChange={e => {
-                    const v = e.target.value
-                    setToDate(v)
-                    if (fromDate && v < fromDate) setFromDate(v)
-                  }}
+                  onChange={e => setToDate(e.target.value)}
                   className="input"
                 />
               </div>
@@ -369,6 +376,7 @@ export default function EmailScanPage() {
                           const isActive = i === parsingEmails.length - 1 && parsingActive
                           const subject = getSubject(email.msg)
                           const isSkipped = subject === 'skipped' || subject === 'error'
+                          const isCached = email.cached === true
                           return (
                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.22rem 0.75rem' }}>
                               <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', width: 28, textAlign: 'right', flexShrink: 0 }}>
@@ -380,6 +388,11 @@ export default function EmailScanPage() {
                                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0, opacity: 0.3 }}>
                                   <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                                 </svg>
+                              ) : isCached ? (
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0, opacity: 0.5 }}>
+                                  <path d="M2 3v6l4-3-4-3z" fill="currentColor"/>
+                                  <path d="M7 3v6l4-3-4-3z" fill="currentColor"/>
+                                </svg>
                               ) : (
                                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0 }}>
                                   <path d="M2 6.5l2.5 2.5 5.5-5.5" stroke="var(--text-accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -388,7 +401,7 @@ export default function EmailScanPage() {
                               <span style={{
                                 fontSize: '0.75rem', color: 'var(--text)',
                                 flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                opacity: isSkipped ? 0.35 : 1,
+                                opacity: isSkipped ? 0.35 : isCached ? 0.5 : 1,
                               }}>
                                 {subject}
                               </span>
