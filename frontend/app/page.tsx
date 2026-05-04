@@ -62,7 +62,8 @@ type KeywordPref = { keyword: string; count: number }
 type Preference = { total: number; keywords: KeywordPref[] }
 type CityVisit = { name: string; visits: string[] }
 type CountryVisit = { name: string; code: string; cities: CityVisit[] }
-type TripKeyword = { keyword: string; subjects: string[] }
+type TripEmail = { subject: string; gmail_msg_id: string | null }
+type TripKeyword = { keyword: string; subjects: TripEmail[] }
 type TripExperience = { category: string; keywords: TripKeyword[] }
 type TripData = { city: string; label: string | null; experiences: TripExperience[] }
 
@@ -146,6 +147,12 @@ export default function DashboardPage() {
   const [visitGroup, setVisitGroup] = useState<VisitGroupMode>('country')
   const [openPrefs, setOpenPrefs] = useState<Set<string>>(new Set())
   const isMobile = useIsMobile()
+
+  function gmailUrl(gmailMsgId: string): string {
+    const base = 'https://mail.google.com/mail/'
+    const auth = me?.user_email ? `?authuser=${encodeURIComponent(me.user_email)}` : 'u/0/'
+    return `${base}${auth}#all/${gmailMsgId}`
+  }
 
   async function selectCity(countryCode: string, cityName: string) {
     const key = `${countryCode}:${cityName}`
@@ -487,12 +494,12 @@ export default function DashboardPage() {
 
           {/* Country view — card grid (default) */}
           {visitGroup === 'country' && (
-            <div className="visit-grid" style={{ columns: '4 240px', columnGap: '0.875rem' }}>
+            <div className="visit-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.875rem', alignItems: 'start' }}>
               {countries.map((country, i) => (
                 <div
                   key={country.name}
                   className={`fade-up d-${Math.min(i + 1, 6) * 100 as 100|200|300|400|500|600} glass-subtle`}
-                  style={{ breakInside: 'avoid', marginBottom: '0.875rem', borderRadius: 'var(--radius-lg)', padding: '1.1rem 1.25rem', border: '1px solid var(--border)' }}
+                  style={{ borderRadius: 'var(--radius-lg)', padding: '1.1rem 1.25rem', border: '1px solid var(--border)' }}
                 >
                   <h3 style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <span aria-hidden="true">{flagEmoji(country.code)}</span>
@@ -790,13 +797,30 @@ export default function DashboardPage() {
                                   </div>
                                   {subjects.map((s, si) => (
                                     <div key={si} style={{
-                                      fontSize: '0.75rem', color: 'var(--text)',
+                                      fontSize: '0.75rem',
                                       lineHeight: 1.4,
                                       paddingTop: si > 0 ? '0.25rem' : 0,
                                       borderTop: si > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none',
-                                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                      display: 'flex', alignItems: 'baseline', gap: '0.35rem',
+                                      overflow: 'hidden',
                                     }}>
-                                      {s}
+                                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)', flex: 1 }}>
+                                        {s.subject}
+                                      </span>
+                                      {s.gmail_msg_id && (
+                                        <a
+                                          href={gmailUrl(s.gmail_msg_id)}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          title="Open in Gmail"
+                                          onClick={e => e.stopPropagation()}
+                                          style={{ color: 'var(--text-muted)', textDecoration: 'none', flexShrink: 0, lineHeight: 1, fontSize: '0.72rem', opacity: 0.6, transition: 'opacity 150ms' }}
+                                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; (e.currentTarget as HTMLElement).style.color = 'var(--text-accent)' }}
+                                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0.6'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)' }}
+                                        >
+                                          ↗
+                                        </a>
+                                      )}
                                     </div>
                                   ))}
                                 </div>
