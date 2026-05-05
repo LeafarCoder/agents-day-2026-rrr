@@ -54,6 +54,17 @@ def trip_emails(trip_id: str, request: Request):
     return result
 
 
+@router.get("/{trip_id}")
+def get_trip(trip_id: str, request: Request):
+    email = _user_email(request)
+    if not email:
+        return JSONResponse({"error": "not_authenticated"}, status_code=401)
+    result = reader.get_trip_detail(email, trip_id)
+    if result is None:
+        return JSONResponse({"error": "trip_not_found"}, status_code=404)
+    return result
+
+
 class TripPatch(BaseModel):
     title: str | None = None
     start_date: date | None = None

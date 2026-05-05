@@ -302,7 +302,7 @@ def get_trips(user_email: str) -> list[dict]:
     return trips
 
 
-def get_trip_emails(user_email: str, trip_id: int) -> list[dict] | None:
+def get_trip_emails(user_email: str, trip_id: str) -> list[dict] | None:
     db = get_client()
     user_res = db.table("users").select("id").eq("email", user_email).execute()
     if not user_res.data:
@@ -320,6 +320,93 @@ def get_trip_emails(user_email: str, trip_id: int) -> list[dict] | None:
         .execute()
     )
     return emails_res.data or []
+
+
+def get_trip_detail(user_email: str, trip_id: str) -> dict | None:
+    from gmail.parser import detect_activity_keywords
+
+    db = get_client()
+    user_res = db.table("users").select("id").eq("email", user_email).execute()
+    if not user_res.data:
+        return None
+    user_id = user_res.data[0]["id"]
+
+    trip_res = (
+        db.table("travels")
+        .select("id, title, start_date, end_date, cities(id, name, countries(name, code))")
+        .eq("id", trip_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    if not trip_res.data:
+        return None
+    t = trip_res.data[0]
+    city_data    = t.get("cities") or {}
+    country_data = city_data.get("countries") or {}
+
+    emails_res = (
+        db.table("emails")
+        .select("id, gmail_msg_id, subject, sender_domain, email_date, llm_extraction")
+        .eq("travel_id", trip_id)
+        .eq("user_id", user_id)
+        .eq("is_excluded", False)
+        .order("email_date", desc=False)
+        .execute()
+    )
+    emails = emails_res.data or []
+
+    user_keywords = get_user_keywords(user_email)
+    kw_sources: dict[str, dict[str, list[dict]]] = {}
+    for email in emails:
+        subject = (email.get("subject") or "").strip()
+        msg_id  = email.get("gmail_msg_id")
+        llm     = email.get("llm_extraction") or {}
+        hits: dict[str, list[str]] = llm.get("keyword_hits") or {}
+        if not hits:
+            hits = detect_activity_keywords(subject, user_keywords)
+        for cat, kws in hits.items():
+            cat_bucket = kw_sources.setdefault(cat, {})
+            for kw in kws:
+                kw_bucket = cat_bucket.setdefault(kw, [])
+                already = {e["subject"] for e in kw_bucket}
+                if subject and subject not in already and len(kw_bucket) < 3:
+                    kw_bucket.append({"subject": subject, "gmail_msg_id": msg_id})
+
+    activities = [
+        {
+            "category": cat,
+            "keywords": [
+                {"keyword": kw, "count": len(subjects), "sample_subjects": subjects}
+                for kw, subjects in sorted(kw_map.items())
+            ],
+        }
+        for cat, kw_map in kw_sources.items()
+        if kw_map
+    ]
+
+    email_list = [
+        {
+            "id":            e.get("id"),
+            "gmail_msg_id":  e.get("gmail_msg_id"),
+            "subject":       e.get("subject"),
+            "sender_domain": e.get("sender_domain"),
+            "email_date":    e.get("email_date"),
+        }
+        for e in emails
+    ]
+
+    return {
+        "id":                   t["id"],
+        "title":                t.get("title"),
+        "start_date":           t.get("start_date"),
+        "end_date":             t.get("end_date"),
+        "destination_city":     city_data.get("name"),
+        "destination_country":  country_data.get("name"),
+        "country_code":         country_data.get("code"),
+        "email_count":          len(emails),
+        "emails":               email_list,
+        "activities":           activities,
+    }
 
 
 def get_merge_candidates(user_email: str) -> list[dict]:
@@ -425,17 +512,19 @@ def get_country_experiences(user_email: str, country_code: str) -> dict | None:
 
         emails_res = (
             db.table("emails")
-            .select("subject, llm_extraction")
+            .select("gmail_msg_id, subject, llm_extraction")
             .eq("travel_id", travel["id"])
             .execute()
         )
 
-        # Aggregate keywords per category, tracking which email subjects contributed each.
+        # Aggregate keywords per category, tracking which emails contributed each.
+        # Each bucket entry is {subject, gmail_msg_id} so the frontend can link to Gmail.
         # Prefer the LLM-extracted keyword_hits; fall back to regex detection on subject.
-        kw_sources: dict[str, dict[str, list[str]]] = {}  # cat → kw → [subject…]
+        kw_sources: dict[str, dict[str, list[dict]]] = {}  # cat → kw → [{subject, gmail_msg_id}…]
         for email in emails_res.data:
-            subject = (email.get("subject") or "").strip()
-            llm = email.get("llm_extraction") or {}
+            subject     = (email.get("subject") or "").strip()
+            msg_id      = email.get("gmail_msg_id")
+            llm         = email.get("llm_extraction") or {}
             hits: dict[str, list[str]] = llm.get("keyword_hits") or {}
             if not hits:
                 hits = detect_activity_keywords(subject, user_keywords)
@@ -443,8 +532,9 @@ def get_country_experiences(user_email: str, country_code: str) -> dict | None:
                 cat_bucket = kw_sources.setdefault(cat, {})
                 for kw in kws:
                     kw_bucket = cat_bucket.setdefault(kw, [])
-                    if subject and subject not in kw_bucket and len(kw_bucket) < 3:
-                        kw_bucket.append(subject)
+                    already = {e["subject"] for e in kw_bucket}
+                    if subject and subject not in already and len(kw_bucket) < 3:
+                        kw_bucket.append({"subject": subject, "gmail_msg_id": msg_id})
 
         experiences: list[dict] = [
             {

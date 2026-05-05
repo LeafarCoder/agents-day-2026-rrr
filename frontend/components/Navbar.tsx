@@ -197,7 +197,7 @@ export default function Navbar() {
                 </Link>
               ))}
 
-              {(isDemo || !isConnected) && (
+              {isDemo && (
                 <>
                   <div style={{ width: "1px", height: 18, background: "var(--border)", margin: "0 0.25rem" }} aria-hidden="true" />
                   <a
@@ -319,8 +319,8 @@ export default function Navbar() {
               <ThemeToggle />
             </div>
 
-            {/* Sign-in CTA for unauthenticated and demo users */}
-            {(isDemo || isConnected === false) && (
+            {/* Sign-in CTA for demo users (unauthenticated gets its own navbar branch above) */}
+            {isDemo && (
               <>
                 <div style={{ height: 1, background: "var(--border)", margin: "1rem 0" }} />
                 <a
