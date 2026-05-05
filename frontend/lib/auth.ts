@@ -105,7 +105,23 @@ export function exchangeAuthTokenIfPresent(): boolean {
   return true
 }
 
+/**
+ * Check URL for ?auth_error= (set by /oauth/callback on failure) and clear it.
+ * Returns the error string if present, otherwise null.
+ */
+export function consumeAuthError(): string | null {
+  if (typeof window === 'undefined') return null
+  const url = new URL(window.location.href)
+  const error = url.searchParams.get('auth_error')
+  if (!error) return null
+  url.searchParams.delete('auth_error')
+  window.history.replaceState({}, '', url.toString())
+  console.error('[auth] OAuth sign-in failed:', error)
+  return error
+}
+
 export async function exchangeAuthTokensIfPresent(): Promise<boolean> {
+  consumeAuthError()
   const exchangedAuth = exchangeAuthTokenIfPresent()
   const exchangedDemo = await exchangeDemoTokenIfPresent()
   return exchangedAuth || exchangedDemo

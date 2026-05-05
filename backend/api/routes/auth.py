@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 from datetime import date, timedelta
 
 from fastapi import APIRouter, Request
@@ -19,6 +20,17 @@ def _redirect_uri(request: Request) -> str:
 
 
 router = APIRouter()
+
+# Server-side store for OAuth PKCE state: state_param -> (code_verifier, expiry_ts)
+# Avoids relying on the session cookie surviving cross-site redirects in incognito/mobile.
+_OAUTH_STATES: dict[str, tuple[str | None, float]] = {}
+_OAUTH_STATE_TTL = 600  # 10 minutes — enough for any OAuth consent flow
+
+
+def _clean_oauth_states() -> None:
+    now = time.time()
+    for k in [k for k, (_, exp) in _OAUTH_STATES.items() if exp < now]:
+        del _OAUTH_STATES[k]
 
 
 @router.get("/api/me")
@@ -56,6 +68,14 @@ def me(request: Request):
             service = build("gmail", "v1", credentials=creds)
             user_email = service.users().getProfile(userId="me").execute()["emailAddress"]
             profile_data = reader.get_profile(user_email)
+            # If credentials_from_session refreshed the token, persist the updated
+            # credentials back to the server-side session store so the next Bearer
+            # request doesn't hit an expired token again.
+            auth_hdr = request.headers.get("authorization") or request.headers.get("Authorization")
+            if auth_hdr and auth_hdr.lower().startswith("bearer "):
+                bearer_token = auth_hdr.split(" ", 1)[1].strip()
+                from api.session_store import update_session
+                update_session(bearer_token, dict(request.session))
         except Exception:
             request.session.pop("credentials", None)
             connected = False
@@ -118,21 +138,38 @@ def auth(request: Request):
         access_type="offline",
         prompt="consent",
     )
-    request.session["oauth_state"] = state
-    request.session["code_verifier"] = flow.code_verifier
+    # Store PKCE state server-side instead of in the session cookie.
+    # Session cookies are blocked during cross-site redirects in incognito/mobile,
+    # so we can't rely on them surviving the Google → /oauth/callback redirect.
+    _clean_oauth_states()
+    _OAUTH_STATES[state] = (flow.code_verifier, time.time() + _OAUTH_STATE_TTL)
     return RedirectResponse(auth_url)
 
 
 @router.get("/oauth/callback", name="oauth_callback")
 def oauth_callback(request: Request):
+    state_param = request.query_params.get("state", "")
+    entry = _OAUTH_STATES.pop(state_param, None)
+    code_verifier: str | None = None
+    if entry is not None:
+        stored_verifier, expiry = entry
+        if time.time() < expiry:
+            code_verifier = stored_verifier
+
     flow = make_flow(redirect_uri=_redirect_uri(request))
-    flow.state = request.session.get("oauth_state")
-    flow.code_verifier = request.session.get("code_verifier")
+    flow.state = state_param or None
+    flow.code_verifier = code_verifier
     auth_response = str(request.url)
     if auth_response.startswith("http://"):
         auth_response = "https://" + auth_response[7:]
-    flow.fetch_token(authorization_response=auth_response)
-    request.session.clear()  # Removes demo flag and stale OAuth state
+
+    try:
+        flow.fetch_token(authorization_response=auth_response)
+    except Exception:
+        sep = "&" if "?" in FRONTEND_URL else "?"
+        return RedirectResponse(f"{FRONTEND_URL}{sep}auth_error=oauth_failed")
+
+    request.session.clear()
     save_credentials_to_session(flow.credentials, request.session)
     session_data = {"credentials": request.session.get("credentials")}
     try:
@@ -143,8 +180,6 @@ def oauth_callback(request: Request):
     except Exception:
         pass
 
-    # Cross-site cookies are unreliable in private/strict browsing modes. Return
-    # an opaque server-side session token so the frontend can use Bearer auth.
     from api.session_store import create_session
     access_token = create_session(session_data)
     sep = "&" if "?" in FRONTEND_URL else "?"
