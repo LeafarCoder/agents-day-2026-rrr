@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { API_URL } from '@/lib/api'
+import { API_URL, apiFetch } from '@/lib/api'
 import OpenRouterKeyModal from '@/components/OpenRouterKeyModal'
 import TourOverlay from '@/components/TourOverlay'
 import OnboardingModal from '@/components/OnboardingModal'
@@ -165,7 +165,7 @@ export default function DashboardPage() {
     if (expCache[key]) return
     setExpLoading(true)
     try {
-      const r = await fetch(`${API_URL}/api/experiences/${countryCode}`, { credentials: 'include' })
+      const r = await apiFetch(`${API_URL}/api/experiences/${countryCode}`, { credentials: 'include' })
       if (r.ok) {
         const d = await r.json()
         const entries: Record<string, TripData[]> = {}
@@ -185,7 +185,7 @@ export default function DashboardPage() {
       // Exchange demo token if present in URL (handles third-party cookie blocking)
       await exchangeDemoTokenIfPresent()
       
-      fetch(`${API_URL}/api/me`, { credentials: 'include' })
+      apiFetch(`${API_URL}/api/me`, { credentials: 'include' })
         .then(r => r.json())
         .then((data: MeResponse) => {
           setMe(data)

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { API_URL } from '@/lib/api'
+import { API_URL, apiFetch } from '@/lib/api'
 import AuthGate from '@/components/AuthGate'
 
 type ScanStep = { step: string; msg: string; current?: number; total?: number; cached?: boolean }
@@ -32,7 +32,7 @@ export default function EmailScanPage() {
   const [showLabelTip, setShowLabelTip] = useState(false)
 
   useEffect(() => {
-    fetch(`${API_URL}/api/me`, { credentials: 'include' })
+    apiFetch(`${API_URL}/api/me`, { credentials: 'include' })
       .then(r => r.json())
       .then((data) => {
         setConnected(data.connected)
@@ -80,7 +80,7 @@ export default function EmailScanPage() {
       ...customLabels.filter(l => l.excluded).map(l => l.name),
     ]
     // Persist current exclusions so future scans start with the same defaults
-    fetch(`${API_URL}/api/settings/excluded-labels`, {
+    apiFetch(`${API_URL}/api/settings/excluded-labels`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

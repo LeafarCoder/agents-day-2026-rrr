@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { API_URL } from '@/lib/api'
+import { API_URL, apiFetch } from '@/lib/api'
 
 type Props = {
   onSaved: () => void
@@ -23,7 +23,7 @@ export default function OpenRouterKeyModal({ onSaved, onDismiss }: Props) {
     setSaving(true)
     setError('')
     try {
-      const res = await fetch(`${API_URL}/api/settings/openrouter-key`, {
+      const res = await apiFetch(`${API_URL}/api/settings/openrouter-key`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

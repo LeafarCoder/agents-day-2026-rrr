@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
-import { API_URL } from "@/lib/api";
+import { API_URL, apiFetch } from "@/lib/api";
 import { useIsMobile } from "@/lib/useIsMobile";
 
 const NAV_LINKS = [
@@ -23,7 +23,7 @@ export default function Navbar() {
   const pathname = usePathname();
 
   useEffect(() => {
-    fetch(`${API_URL}/api/me`, { credentials: "include" })
+    apiFetch(`${API_URL}/api/me`, { credentials: "include" })
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         if (d?.demo) setIsDemo(true);

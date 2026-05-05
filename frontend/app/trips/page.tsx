@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, Fragment } from 'react'
-import { API_URL } from '@/lib/api'
+import { API_URL, apiFetch } from '@/lib/api'
 import AuthGate from '@/components/AuthGate'
 import SelectBox from '@/components/SelectBox'
 
@@ -106,9 +106,9 @@ export default function TripsPage() {
     setError('')
     try {
       const [tripsRes, candRes, meRes] = await Promise.all([
-        fetch(`${API_URL}/api/trips`, { credentials: 'include' }),
-        fetch(`${API_URL}/api/trips/merge-candidates`, { credentials: 'include' }),
-        fetch(`${API_URL}/api/me`, { credentials: 'include' }),
+        apiFetch(`${API_URL}/api/trips`, { credentials: 'include' }),
+        apiFetch(`${API_URL}/api/trips/merge-candidates`, { credentials: 'include' }),
+        apiFetch(`${API_URL}/api/me`, { credentials: 'include' }),
       ])
       if (!tripsRes.ok) throw new Error('Failed to load trips')
       const tripsData: Trip[] = await tripsRes.json()
@@ -177,7 +177,7 @@ export default function TripsPage() {
     setExpandedEmails([])
     setExpandedLoading(true)
     try {
-      const res = await fetch(`${API_URL}/api/trips/${tripId}/emails`, { credentials: 'include' })
+      const res = await apiFetch(`${API_URL}/api/trips/${tripId}/emails`, { credentials: 'include' })
       if (res.ok) setExpandedEmails(await res.json())
     } finally {
       setExpandedLoading(false)
@@ -210,7 +210,7 @@ export default function TripsPage() {
       const body: Record<string, unknown> = { title: editTitle.trim() || null }
       if (editStart) body.start_date = editStart
       if (editEnd) body.end_date = editEnd
-      const res = await fetch(`${API_URL}/api/trips/${editTrip.id}`, {
+      const res = await apiFetch(`${API_URL}/api/trips/${editTrip.id}`, {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -246,7 +246,7 @@ export default function TripsPage() {
     setMerging(true)
     setMergeError('')
     try {
-      const res = await fetch(`${API_URL}/api/trips/merge`, {
+      const res = await apiFetch(`${API_URL}/api/trips/merge`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

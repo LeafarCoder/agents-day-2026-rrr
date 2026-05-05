@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect, useRef, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { API_URL } from '@/lib/api'
+import { API_URL, apiFetch } from '@/lib/api'
 import { useIsMobile } from '@/lib/useIsMobile'
 import AuthGate from '@/components/AuthGate'
 import SelectBox from '@/components/SelectBox'
@@ -212,7 +212,7 @@ function ScanResultsContent() {
   async function excludeBooking(id: string) {
     setExcludedIds(prev => new Set(prev).add(id))
     try {
-      await fetch(`${API_URL}/api/bookings/${encodeURIComponent(id)}/exclude`, {
+      await apiFetch(`${API_URL}/api/bookings/${encodeURIComponent(id)}/exclude`, {
         method: 'POST',
         credentials: 'include',
       })
@@ -231,7 +231,7 @@ function ScanResultsContent() {
     })
     await Promise.all(
       ids.map(id =>
-        fetch(`${API_URL}/api/bookings/${encodeURIComponent(id)}/exclude`, {
+        apiFetch(`${API_URL}/api/bookings/${encodeURIComponent(id)}/exclude`, {
           method: 'POST', credentials: 'include',
         }).catch(() => {})
       )
@@ -243,12 +243,12 @@ function ScanResultsContent() {
       ? `${API_URL}/api/scan?from_date=${fromParam}&to_date=${toParam}`
       : `${API_URL}/api/scan`
 
-    fetch(`${API_URL}/api/me`, { credentials: 'include' })
+    apiFetch(`${API_URL}/api/me`, { credentials: 'include' })
       .then(r => r.ok ? r.json() : null)
       .then(d => setConnected(d?.connected ?? false))
       .catch(() => setConnected(false))
 
-    fetch(url, { credentials: 'include' })
+    apiFetch(url, { credentials: 'include' })
       .then(r => {
         if (r.status === 401) { setConnected(false); return null }
         return r.json()

@@ -1,4 +1,4 @@
-import { API_URL } from './api'
+import { API_URL, apiFetch } from './api'
 
 export type TourPlacement = 'top' | 'bottom' | 'left' | 'right' | 'center'
 
@@ -70,9 +70,9 @@ export function setTourSeenCached(v: boolean): void {
 }
 
 export async function postTourComplete(): Promise<void> {
-  await fetch(`${API_URL}/api/settings/tour-complete`, { method: 'POST', credentials: 'include' })
+  await apiFetch(`${API_URL}/api/settings/tour-complete`, { method: 'POST', credentials: 'include' })
 }
 
 export async function postTourReset(): Promise<void> {
-  await fetch(`${API_URL}/api/settings/tour-reset`, { method: 'POST', credentials: 'include' })
+  await apiFetch(`${API_URL}/api/settings/tour-reset`, { method: 'POST', credentials: 'include' })
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { API_URL } from '@/lib/api'
+import { API_URL, apiFetch } from '@/lib/api'
 import { postTourReset, setTourSeenCached } from '@/lib/tour'
 import { COUNTRIES } from '@/lib/countries'
 import { useIsMobile } from '@/lib/useIsMobile'
@@ -62,7 +62,7 @@ export default function AccountPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   useEffect(() => {
-    fetch(`${API_URL}/api/me`, { credentials: 'include' })
+    apiFetch(`${API_URL}/api/me`, { credentials: 'include' })
       .then(r => r.json())
       .then(d => {
         setConnected(d.connected ?? false)
@@ -130,7 +130,7 @@ export default function AccountPage() {
       ...customLabels,
     ]
     try {
-      const r = await fetch(`${API_URL}/api/settings/excluded-labels`, {
+      const r = await apiFetch(`${API_URL}/api/settings/excluded-labels`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -156,7 +156,7 @@ export default function AccountPage() {
     setSaving(true)
     setSaveError(null)
     try {
-      const r = await fetch(`${API_URL}/api/settings/profile`, {
+      const r = await apiFetch(`${API_URL}/api/settings/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -187,7 +187,7 @@ export default function AccountPage() {
     setKeySaving(true)
     setKeyError(null)
     try {
-      const r = await fetch(`${API_URL}/api/settings/openrouter-key`, {
+      const r = await apiFetch(`${API_URL}/api/settings/openrouter-key`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -216,7 +216,7 @@ export default function AccountPage() {
     setKeyRemoving(true)
     setKeyError(null)
     try {
-      const r = await fetch(`${API_URL}/api/settings/openrouter-key`, {
+      const r = await apiFetch(`${API_URL}/api/settings/openrouter-key`, {
         method: 'DELETE',
         credentials: 'include',
       })
@@ -241,7 +241,7 @@ export default function AccountPage() {
     if (revealedKey) { setRevealedKey(null); return }
     setKeyRevealing(true)
     try {
-      const r = await fetch(`${API_URL}/api/settings/openrouter-key`, { credentials: 'include' })
+      const r = await apiFetch(`${API_URL}/api/settings/openrouter-key`, { credentials: 'include' })
       if (r.ok) {
         const d = await r.json()
         setRevealedKey(d.key)
@@ -255,7 +255,7 @@ export default function AccountPage() {
     setDeleting(true)
     setShowDeleteConfirm(false)
     try {
-      await fetch(`${API_URL}/api/me`, { method: 'DELETE', credentials: 'include' })
+      await apiFetch(`${API_URL}/api/me`, { method: 'DELETE', credentials: 'include' })
       window.location.href = `${API_URL}/disconnect`
     } catch {
       setDeleting(false)

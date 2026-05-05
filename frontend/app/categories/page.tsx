@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { API_URL } from '@/lib/api'
+import { API_URL, apiFetch } from '@/lib/api'
 
 export default function CategoriesPage() {
   const [signals, setSignals] = useState<Record<string, string[]>>({})
@@ -36,7 +36,7 @@ export default function CategoriesPage() {
   }
 
   function reload() {
-    fetch(`${API_URL}/api/preferences`, { credentials: 'include' })
+    apiFetch(`${API_URL}/api/preferences`, { credentials: 'include' })
       .then(r => r.json())
       .then(d => {
         setSignals(d.signals ?? {})
@@ -48,7 +48,7 @@ export default function CategoriesPage() {
   }
 
   useEffect(() => {
-    fetch(`${API_URL}/api/me`, { credentials: 'include' })
+    apiFetch(`${API_URL}/api/me`, { credentials: 'include' })
       .then(r => r.json())
       .then(d => { setIsDemo(d.demo ?? false) })
       .catch(() => {})
@@ -68,7 +68,7 @@ export default function CategoriesPage() {
       const form = new FormData()
       form.set('category', category)
       form.set('keyword', kw)
-      const r = await fetch(`${API_URL}/api/preferences/keywords`, { method: 'POST', body: form, credentials: 'include' })
+      const r = await apiFetch(`${API_URL}/api/preferences/keywords`, { method: 'POST', body: form, credentials: 'include' })
       if (!r.ok) { const d = await r.json().catch(() => ({})); setError(d.detail ?? `Error ${r.status}`); return }
       reload()
     } catch {
@@ -81,7 +81,7 @@ export default function CategoriesPage() {
     if (!ok) return
     setError(null)
     try {
-      const r = await fetch(
+      const r = await apiFetch(
         `${API_URL}/api/preferences/keywords?category=${encodeURIComponent(category)}&keyword=${encodeURIComponent(keyword)}`,
         { method: 'DELETE', credentials: 'include' },
       )
@@ -101,7 +101,7 @@ export default function CategoriesPage() {
     try {
       const form = new FormData()
       form.set('name', name)
-      const r = await fetch(`${API_URL}/api/preferences/categories`, { method: 'POST', body: form, credentials: 'include' })
+      const r = await apiFetch(`${API_URL}/api/preferences/categories`, { method: 'POST', body: form, credentials: 'include' })
       if (!r.ok) { const d = await r.json().catch(() => ({})); setError(d.detail ?? `Error ${r.status}`); return }
       reload()
     } catch {
@@ -114,7 +114,7 @@ export default function CategoriesPage() {
     if (!ok) return
     setError(null)
     try {
-      const r = await fetch(`${API_URL}/api/preferences/categories/${encodeURIComponent(category)}`, {
+      const r = await apiFetch(`${API_URL}/api/preferences/categories/${encodeURIComponent(category)}`, {
         method: 'DELETE', credentials: 'include',
       })
       if (!r.ok) { const d = await r.json().catch(() => ({})); setError(d.detail ?? `Error ${r.status}`); return }

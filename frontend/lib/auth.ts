@@ -9,7 +9,7 @@
  * 4. Frontend clears URL param and continues
  */
 
-import { API_URL } from './api'
+import { API_URL, apiFetch } from './api'
 
 const TOKEN_PARAM = 'demo_token'
 
@@ -32,7 +32,7 @@ export async function exchangeDemoTokenIfPresent(): Promise<boolean> {
   window.history.replaceState({}, '', cleanUrl)
 
   try {
-    const res = await fetch(`${API_URL}/api/auth/exchange`, {
+    const res = await apiFetch(`${API_URL}/api/auth/exchange`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',  // Even if cookie doesn't work, we try

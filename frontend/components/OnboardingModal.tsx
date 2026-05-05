@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { API_URL } from '@/lib/api'
+import { API_URL, apiFetch } from '@/lib/api'
 import { COUNTRIES } from '@/lib/countries'
 
 type Step = 'name' | 'location' | 'openrouter'
@@ -68,7 +68,7 @@ export default function OnboardingModal({ onComplete }: Props) {
     setProfileSaving(true)
     setProfileError('')
     try {
-      const r = await fetch(`${API_URL}/api/settings/profile`, {
+      const r = await apiFetch(`${API_URL}/api/settings/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -98,7 +98,7 @@ export default function OnboardingModal({ onComplete }: Props) {
     setKeySaving(true)
     setKeyError('')
     try {
-      const r = await fetch(`${API_URL}/api/settings/openrouter-key`, {
+      const r = await apiFetch(`${API_URL}/api/settings/openrouter-key`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
