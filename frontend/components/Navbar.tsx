@@ -14,6 +14,8 @@ const NAV_LINKS = [
   { href: "/",        label: "Profile" },
   { href: "/trips",   label: "Trips"   },
   { href: "/emails",  label: "Emails"  },
+  // Dev preview for the loader animation
+  { href: "/spinner-preview", label: "Spinner" },
 ] as const;
 
 export default function Navbar() {
