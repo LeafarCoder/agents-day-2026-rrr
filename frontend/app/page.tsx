@@ -254,14 +254,13 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <div style={{ display: 'flex', gap: '6px' }}>
-          {[0, 1, 2].map(i => (
-            <span key={i} style={{
-              width: 8, height: 8, borderRadius: '50%',
-              background: 'var(--text-accent)', opacity: 0.4,
-              animation: `fadeIn 0.6s ease ${i * 0.15}s both`,
-            }} />
-          ))}
+        <div>
+          {/* DNASpinner: a decorative helix + airplane loader */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {/* Dynamically import to avoid SSR mismatch (component is client) */}
+            {/* We'll lazy-load the spinner component on client mount for safety */}
+            <div id="dna-spinner-root" />
+          </div>
         </div>
       </div>
     )
