@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
 import { API_URL, apiFetch } from "@/lib/api";
-import { DEMO_AUTH_EVENT, DEMO_AUTH_PENDING_KEY, exchangeDemoTokenIfPresent } from "@/lib/auth";
+import { DEMO_AUTH_EVENT, DEMO_AUTH_PENDING_KEY, SESSION_MODE_KEY, exchangeDemoTokenIfPresent } from "@/lib/auth";
 import { useIsMobile } from "@/lib/useIsMobile";
 
 const NAV_LINKS = [
@@ -32,8 +32,12 @@ export default function Navbar() {
         const hasTokenInUrl = new URL(window.location.href).searchParams.has('demo_token');
         const isDemoPending = localStorage.getItem(DEMO_AUTH_PENDING_KEY) === '1';
         const hasStoredToken = !!localStorage.getItem('session_token');
+        const isStoredDemo = localStorage.getItem(SESSION_MODE_KEY) === 'demo';
         if (hasTokenInUrl || isDemoPending || hasStoredToken) {
           setIsConnected(true);
+        }
+        if (hasTokenInUrl || isDemoPending || isStoredDemo) {
+          setIsDemo(true);
         }
       } catch {}
 
@@ -71,7 +75,12 @@ export default function Navbar() {
     }
     loadSession();
 
-    const onAuthChanged = () => { loadSession(); };
+    const onAuthChanged = (event: Event) => {
+      const detail = (event as CustomEvent<{ connected?: boolean; demo?: boolean }>).detail;
+      if (detail?.connected) setIsConnected(true);
+      if (detail?.demo) setIsDemo(true);
+      loadSession();
+    };
     window.addEventListener(DEMO_AUTH_EVENT, onAuthChanged);
     return () => {
       cancelled = true;

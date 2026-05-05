@@ -14,6 +14,7 @@ import { API_URL, apiFetch } from './api'
 const TOKEN_PARAM = 'demo_token'
 export const DEMO_AUTH_EVENT = 'demo-auth-changed'
 export const DEMO_AUTH_PENDING_KEY = 'demo_auth_pending'
+export const SESSION_MODE_KEY = 'session_mode'
 let exchangeInFlight: Promise<boolean> | null = null
 
 /**
@@ -52,7 +53,12 @@ export async function exchangeDemoTokenIfPresent(): Promise<boolean> {
         // If server returned an access token, persist it to localStorage
         if (typeof window !== 'undefined' && data && data.access_token) {
           try { localStorage.setItem('session_token', data.access_token) } catch {}
-          try { window.dispatchEvent(new CustomEvent(DEMO_AUTH_EVENT)) } catch {}
+          try { localStorage.setItem(SESSION_MODE_KEY, 'demo') } catch {}
+          try {
+            window.dispatchEvent(new CustomEvent(DEMO_AUTH_EVENT, {
+              detail: { connected: true, demo: true, user_email: data.user_email },
+            }))
+          } catch {}
         }
         console.log('[auth] Demo token exchanged successfully')
         return true
