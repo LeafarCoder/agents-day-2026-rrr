@@ -207,7 +207,7 @@ export default function CategoriesPage() {
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
             <div>
               <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.6rem, 4vw, 2.2rem)', fontWeight: 600, color: 'var(--text)', margin: '0 0 0.35rem', lineHeight: 1.15 }}>
-                Activity Categories
+                Travel Categories
               </h1>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>
                 {isDemo ? 'Read-only in demo mode. Sign in to manage your own categories.' : 'Keywords used to detect activity types in your travel emails.'}

@@ -642,7 +642,7 @@ export default function AccountPage() {
       {/* Activity categories card */}
       <div className="fade-up d-400 glass-subtle" style={{ borderRadius: 'var(--radius-xl)', padding: '1.5rem', marginBottom: '1rem' }}>
         <h2 style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '0 0 0.6rem' }}>
-          Activity Categories
+          Travel Categories
         </h2>
         <p style={{ fontSize: '0.83rem', color: 'var(--text-muted)', margin: '0 0 1rem', lineHeight: 1.55 }}>
           Keywords used to detect activity types in your travel emails. Customise which categories and terms are matched during a scan.

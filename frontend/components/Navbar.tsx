@@ -387,7 +387,7 @@ export default function Navbar() {
             {/* Settings links */}
             {([
               { href: '/account', label: 'Account' },
-              { href: '/categories', label: 'Categories' },
+              { href: '/categories', label: 'Travel Categories' },
             ] as const).map(({ href, label }) => (
               <Link
                 key={href}

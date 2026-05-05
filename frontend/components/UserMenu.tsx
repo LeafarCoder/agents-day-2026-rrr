@@ -89,9 +89,7 @@ export default function UserMenu({ displayName, isDemo }: Props) {
           top: 'calc(100% + 8px)',
           right: 0,
           minWidth: 176,
-          background: 'var(--nav-surface)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
+          background: 'var(--bg)',
           border: '1px solid var(--border)',
           borderRadius: 'var(--radius-lg)',
           boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
@@ -99,7 +97,7 @@ export default function UserMenu({ displayName, isDemo }: Props) {
           zIndex: 100,
         }}>
           <MenuItem href="/account" label="Account" active={pathname === '/account'} onClick={() => setOpen(false)} />
-          <MenuItem href="/categories" label="Categories" active={pathname === '/categories'} onClick={() => setOpen(false)} />
+          <MenuItem href="/categories" label="Travel Categories" active={pathname === '/categories'} onClick={() => setOpen(false)} />
           <Divider />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.3rem 0.6rem' }}>
             <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Theme</span>
