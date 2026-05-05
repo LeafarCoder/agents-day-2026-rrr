@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3042",
-    "build": "next build && npx @cloudflare/next-on-pages@1",
+    "build": "node scripts/cloudflare-build.mjs",
     "start": "next start",
     "lint": "eslint"
   },
