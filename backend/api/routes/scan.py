@@ -49,7 +49,7 @@ def _fetch_full(creds, msg_id):
 
 @router.post("/api/bookings/{gmail_msg_id}/exclude")
 def exclude_booking(gmail_msg_id: str, request: Request):
-    user_email = get_current_user_email(request.session)
+    user_email = get_user_email(request)
     if not user_email:
         return JSONResponse({"error": "not_authenticated"}, status_code=401)
     writer.exclude_booking(user_email, gmail_msg_id)
@@ -62,7 +62,7 @@ def scan_results(
     from_date: str | None = None,
     to_date: str | None = None,
 ):
-    user_email = get_current_user_email(request.session)
+    user_email = get_user_email(request)
     if not user_email:
         return JSONResponse({"error": "not_authenticated"}, status_code=401)
     data = reader.get_scan_results(user_email, from_date=from_date, to_date=to_date)
