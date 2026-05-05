@@ -111,28 +111,8 @@ export default function Navbar() {
         >
           {brand}
 
-          {isConnected === false ? (
-            /* ── Unauthenticated: only Sign In + theme toggle ── */
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <a
-                href={`${API_URL}/auth`}
-                style={{
-                  padding: "0.35rem 0.8rem",
-                  borderRadius: "var(--radius-md)",
-                  fontSize: "0.78rem",
-                  fontWeight: 600,
-                  color: "var(--text-accent)",
-                  border: "1px solid var(--border-accent)",
-                  textDecoration: "none",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Sign In →
-              </a>
-              <ThemeToggle />
-            </div>
-          ) : isMobile ? (
-            /* ── Hamburger button (mobile) ── */
+          {isMobile ? (
+            /* ── Hamburger button (mobile) — always show for all users ── */
             <button
               onClick={() => setOpen(o => !o)}
               aria-label="Menu"
@@ -166,6 +146,26 @@ export default function Navbar() {
                 </svg>
               )}
             </button>
+          ) : isConnected === false ? (
+            /* ── Desktop unauthenticated: only Sign In + theme toggle ── */
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <a
+                href={`${API_URL}/auth`}
+                style={{
+                  padding: "0.35rem 0.8rem",
+                  borderRadius: "var(--radius-md)",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                  color: "var(--text-accent)",
+                  border: "1px solid var(--border-accent)",
+                  textDecoration: "none",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Sign In →
+              </a>
+              <ThemeToggle />
+            </div>
           ) : (
             /* ── Desktop nav links ── */
             <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
