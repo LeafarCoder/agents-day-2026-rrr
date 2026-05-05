@@ -11,6 +11,10 @@ import { TOUR_STEPS, getTourSeenCached, setTourSeenCached, postTourComplete } fr
 import { useIsMobile } from '@/lib/useIsMobile'
 import { exchangeAuthTokensIfPresent } from '@/lib/auth'
 
+// Client-only spinner (SVG + SMIL motion). Disabled on server to avoid SSR mismatch.
+const DNASpinner = dynamic(() => import('@/components/DNASpinner'), { ssr: false })
+
+
 const HERO_ADJECTIVES = [
   'restless',
   'curious',
@@ -257,9 +261,7 @@ export default function DashboardPage() {
         <div>
           {/* DNASpinner: a decorative helix + airplane loader */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {/* Dynamically import to avoid SSR mismatch (component is client) */}
-            {/* We'll lazy-load the spinner component on client mount for safety */}
-            <div id="dna-spinner-root" />
+            <DNASpinner size={92} title="Loading profile…" />
           </div>
         </div>
       </div>
