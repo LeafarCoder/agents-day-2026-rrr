@@ -42,7 +42,8 @@ async def build_taste_profile(request: Request):
             status_code=503,
         )
 
-    user_email = await asyncio.to_thread(get_current_user_email, request.session)
+    from api.deps import get_user_email
+    user_email = await asyncio.to_thread(get_user_email, request)
 
     log.info(f"Profile build triggered  user={user_email}")
 
