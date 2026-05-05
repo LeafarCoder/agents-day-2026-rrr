@@ -257,7 +257,7 @@ export default function AccountPage() {
     try {
       await apiFetch(`${API_URL}/api/me`, { method: 'DELETE', credentials: 'include' })
       try { localStorage.removeItem('session_token') } catch {}
-      try { localStorage.removeItem(SESSION_MODE_KEY) } catch {}
+      try { localStorage.removeItem('session_mode') } catch {}
       window.location.href = `${API_URL}/disconnect`
     } catch {
       setDeleting(false)
@@ -791,6 +791,33 @@ export default function AccountPage() {
         </div>
       )}
 
+      {/* Session card */}
+      <div className="fade-up d-500 glass-subtle" style={{ borderRadius: 'var(--radius-xl)', padding: '1.5rem', marginBottom: '1rem' }}>
+        <h2 style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '0 0 1rem' }}>
+          Session
+        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <p style={{ fontSize: '0.83rem', color: 'var(--text-muted)', margin: 0 }}>
+            {isDemo ? 'You are browsing in demo mode.' : 'Signed in as ' + (userEmail ?? '—')}
+          </p>
+          <button
+            onClick={async () => {
+              try {
+                await apiFetch(`${API_URL}/disconnect`, { method: 'GET' })
+              } catch (e) {
+                // ignore
+              }
+              try { localStorage.removeItem('session_token') } catch {}
+              try { localStorage.removeItem('session_mode') } catch {}
+              window.location.href = '/'
+            }}
+            className="btn btn-ghost"
+            style={{ fontSize: '0.82rem' }}
+          >
+            Log out
+          </button>
+        </div>
+      </div>
       {/* Danger zone */}
       {!isDemo && (
         <div className="fade-up d-600" style={{
