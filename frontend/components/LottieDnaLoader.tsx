@@ -10,15 +10,15 @@ export default function LottieDnaLoader({ size = 140, autoplay = true }: { size?
   useEffect(() => {
     // If the lottie-player web component is already defined, we're ready
     if (typeof window === 'undefined') return
-    const el = (window as any).customElements && (window as any).customElements.get('lottie-player')
+    const el = (window as any).customElements && (window as any).customElements.get('dotlottie-wc')
     if (el) { setReady(true); return }
 
-    // Dynamically inject the lottie-player script from unpkg
-    const scriptId = 'lottie-player-script'
+    // Dynamically inject the dotLottie web component script from unpkg
+    const scriptId = 'dotlottie-wc-script'
     if (document.getElementById(scriptId)) {
       // wait for it to define the custom element
       const check = setInterval(() => {
-        if ((window as any).customElements && (window as any).customElements.get('lottie-player')) {
+        if ((window as any).customElements && (window as any).customElements.get('dotlottie-wc')) {
           clearInterval(check)
           setReady(true)
         }
@@ -28,14 +28,15 @@ export default function LottieDnaLoader({ size = 140, autoplay = true }: { size?
 
     const s = document.createElement('script')
     s.id = scriptId
-    s.src = 'https://unpkg.com/@lottiefiles/lottie-player@1.6.1/dist/lottie-player.js'
+    s.type = 'module'
+    s.src = 'https://unpkg.com/@lottiefiles/dotlottie-wc@0.9.10/dist/dotlottie-wc.js'
     s.async = true
     s.onload = () => {
       // small delay to ensure registration
       setTimeout(() => setReady(true), 50)
     }
     s.onerror = () => {
-      // silently fail — caller will fall back to nothing
+      // silently fail — caller will fall back to plain spinner
       setReady(false)
     }
     document.head.appendChild(s)
@@ -53,8 +54,8 @@ export default function LottieDnaLoader({ size = 140, autoplay = true }: { size?
   return (
     <div ref={containerRef} style={{ width: size, height: size, display: 'inline-block' }} aria-live="polite" role="status" aria-label="Loading profile...">
       {ready ? (
-        // @ts-ignore - lottie-player is a web component
-        <lottie-player
+        // @ts-ignore - dotlottie-wc is a web component that handles .lottie archives
+        <dotlottie-wc
           src="/dna_spinner.lottie"
           background="transparent"
           speed="1"
