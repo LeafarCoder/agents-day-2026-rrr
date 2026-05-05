@@ -40,6 +40,11 @@ export async function exchangeDemoTokenIfPresent(): Promise<boolean> {
     })
 
     if (res.ok) {
+      const data = await res.json().catch(() => ({}))
+      // If server returned an access token, persist it to localStorage
+      if (typeof window !== 'undefined' && data && data.access_token) {
+        try { localStorage.setItem('session_token', data.access_token) } catch {}
+      }
       console.log('[auth] Demo token exchanged successfully')
       return true
     }

@@ -798,13 +798,21 @@ export default function AccountPage() {
           <p style={{ fontSize: '0.83rem', color: 'var(--text-muted)', margin: 0 }}>
             {isDemo ? 'You are browsing in demo mode.' : 'Signed in as ' + (userEmail ?? '—')}
           </p>
-          <a
-            href={`${API_URL}/disconnect`}
+          <button
+            onClick={async () => {
+              try {
+                await apiFetch(`${API_URL}/disconnect`, { method: 'GET' })
+              } catch (e) {
+                // ignore
+              }
+              try { localStorage.removeItem('session_token') } catch {}
+              window.location.href = '/'
+            }}
             className="btn btn-ghost"
             style={{ fontSize: '0.82rem' }}
           >
             Log out
-          </a>
+          </button>
         </div>
       </div>
 

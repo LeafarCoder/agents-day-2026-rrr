@@ -10,18 +10,43 @@ export async function apiFetch(input: RequestInfo, init?: RequestInit) {
   init = init ? { ...init } : {}
 
   try {
+    let isApi = false
+    let urlStr = null
+
     if (typeof input === 'string') {
-      // If it's a request to the configured API (absolute) or a relative /api/ path,
-      // ensure credentials is set unless the caller explicitly set it.
-      const isApi = input.startsWith(API_URL) || input.startsWith('/api/')
-      if (isApi) {
-        if (!('credentials' in init)) init.credentials = 'include'
-      }
+      urlStr = input
+      isApi = input.startsWith(API_URL) || input.startsWith('/api/')
     } else if (input instanceof Request) {
-      const url = input.url
-      const isApi = url.startsWith(API_URL) || new URL(url).pathname.startsWith('/api/')
-      if (isApi) {
-        if (!('credentials' in init)) init.credentials = 'include'
+      urlStr = input.url
+      isApi = urlStr.startsWith(API_URL) || new URL(urlStr).pathname.startsWith('/api/')
+    }
+
+    if (isApi) {
+      // Ensure credentials for cross-origin scenarios unless caller already set it
+      if (!('credentials' in init)) init.credentials = 'include'
+
+      // If running in browser and we have a stored token, attach it as a Bearer header
+      if (typeof window !== 'undefined') {
+        try {
+          const token = localStorage.getItem('session_token')
+          if (token) {
+            // Normalize headers to plain object if needed
+            if (init.headers instanceof Headers) {
+              const h: Record<string, string> = {}
+              for (const [k, v] of init.headers.entries()) h[k] = v
+              init.headers = { ...h }
+            } else if (!init.headers) {
+              init.headers = {}
+            }
+            // Don't overwrite existing Authorization header
+            const hdrs = init.headers as Record<string, string>
+            if (!hdrs['Authorization'] && !hdrs['authorization']) {
+              hdrs['Authorization'] = `Bearer ${token}`
+            }
+          }
+        } catch (err) {
+          // ignore storage errors
+        }
       }
     }
   } catch (err) {

@@ -71,13 +71,19 @@ def exchange_demo_token(request: Request, body: dict):
     # Consume the token (one-time use)
     del _DEMO_TOKENS[token]
     
-    # Set session variables
-    request.session.clear()
-    request.session["demo"] = True
-    request.session["demo_user_email"] = demo_email
-    
+    # Create a server-side session and return an access token.
+    # The frontend will store this token and send it as Authorization: Bearer <token>.
+    from api.session_store import create_session
+
+    session_data = {
+        "demo": True,
+        "demo_user_email": demo_email,
+    }
+    access_token = create_session(session_data)
+
     return {
         "success": True,
+        "access_token": access_token,
         "demo": True,
         "user_email": demo_email,
     }

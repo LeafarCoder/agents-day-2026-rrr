@@ -86,6 +86,17 @@ def delete_me(request: Request):
         request.session.pop("credentials", None)
         return {"error": "failed_to_resolve_user"}
     writer.delete_user(user_email)
+
+    # If a bearer token was used for this session, also remove the server-side session
+    auth_hdr = request.headers.get("authorization") or request.headers.get("Authorization")
+    if auth_hdr and auth_hdr.lower().startswith("bearer "):
+        token = auth_hdr.split(" ", 1)[1].strip()
+        try:
+            from api.session_store import delete_session as _delete_sess
+            _delete_sess(token)
+        except Exception:
+            pass
+
     return {"deleted": True, "email": user_email}
 
 
@@ -130,5 +141,15 @@ def oauth_callback(request: Request):
 
 @router.get("/disconnect")
 def disconnect(request: Request):
+    # If a bearer token was provided, delete the server-side session mapping
+    auth_hdr = request.headers.get("authorization") or request.headers.get("Authorization")
+    if auth_hdr and auth_hdr.lower().startswith("bearer "):
+        token = auth_hdr.split(" ", 1)[1].strip()
+        try:
+            from api.session_store import delete_session as _delete_sess
+            _delete_sess(token)
+        except Exception:
+            pass
+
     request.session.clear()
     return RedirectResponse(FRONTEND_URL)
