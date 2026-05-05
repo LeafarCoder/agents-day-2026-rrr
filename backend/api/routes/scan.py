@@ -19,7 +19,7 @@ import db.writer as writer
 import db.reader as reader
 from config import LLM_CONCURRENCY
 from detection.config import BLOCKED_DOMAINS
-from api.deps import is_demo_request
+from api.deps import get_user_email, is_demo_request
 
 log    = get("scan")
 router = APIRouter()

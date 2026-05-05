@@ -12,6 +12,7 @@
 import { API_URL, apiFetch } from './api'
 
 const TOKEN_PARAM = 'demo_token'
+let exchangeInFlight: Promise<boolean> | null = null
 
 /**
  * Check URL for a demo_token and exchange it for a session.
@@ -20,40 +21,47 @@ const TOKEN_PARAM = 'demo_token'
  */
 export async function exchangeDemoTokenIfPresent(): Promise<boolean> {
   if (typeof window === 'undefined') return false
+  if (exchangeInFlight) return exchangeInFlight
 
-  const url = new URL(window.location.href)
-  const token = url.searchParams.get(TOKEN_PARAM)
+  exchangeInFlight = (async () => {
+    const url = new URL(window.location.href)
+    const token = url.searchParams.get(TOKEN_PARAM)
 
-  if (!token) return false
+    if (!token) return false
 
-  // Clear the token from URL immediately (before the fetch)
-  url.searchParams.delete(TOKEN_PARAM)
-  const cleanUrl = url.toString()
-  window.history.replaceState({}, '', cleanUrl)
+    // Clear the token from URL immediately (before the fetch)
+    url.searchParams.delete(TOKEN_PARAM)
+    const cleanUrl = url.toString()
+    window.history.replaceState({}, '', cleanUrl)
 
-  try {
-    const res = await apiFetch(`${API_URL}/api/auth/exchange`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',  // Even if cookie doesn't work, we try
-      body: JSON.stringify({ token }),
-    })
+    try {
+      const res = await apiFetch(`${API_URL}/api/auth/exchange`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',  // Even if cookie doesn't work, we try
+        body: JSON.stringify({ token }),
+      })
 
-    if (res.ok) {
-      const data = await res.json().catch(() => ({}))
-      // If server returned an access token, persist it to localStorage
-      if (typeof window !== 'undefined' && data && data.access_token) {
-        try { localStorage.setItem('session_token', data.access_token) } catch {}
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}))
+        // If server returned an access token, persist it to localStorage
+        if (typeof window !== 'undefined' && data && data.access_token) {
+          try { localStorage.setItem('session_token', data.access_token) } catch {}
+        }
+        console.log('[auth] Demo token exchanged successfully')
+        return true
       }
-      console.log('[auth] Demo token exchanged successfully')
-      return true
-    }
 
-    const error = await res.json().catch(() => ({}))
-    console.error('[auth] Demo token exchange failed:', error)
-    return false
-  } catch (err) {
-    console.error('[auth] Demo token exchange error:', err)
-    return false
-  }
+      const error = await res.json().catch(() => ({}))
+      console.error('[auth] Demo token exchange failed:', error)
+      return false
+    } catch (err) {
+      console.error('[auth] Demo token exchange error:', err)
+      return false
+    } finally {
+      exchangeInFlight = null
+    }
+  })()
+
+  return exchangeInFlight
 }

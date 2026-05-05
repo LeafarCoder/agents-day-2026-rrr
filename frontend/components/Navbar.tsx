@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
 import { API_URL, apiFetch } from "@/lib/api";
+import { exchangeDemoTokenIfPresent } from "@/lib/auth";
 import { useIsMobile } from "@/lib/useIsMobile";
 
 const NAV_LINKS = [
@@ -23,13 +24,17 @@ export default function Navbar() {
   const pathname = usePathname();
 
   useEffect(() => {
-    apiFetch(`${API_URL}/api/me`, { credentials: "include" })
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        if (d?.demo) setIsDemo(true);
-        setIsConnected(d?.connected ?? false);
-      })
-      .catch(() => { setIsConnected(false); })
+    async function loadSession() {
+      await exchangeDemoTokenIfPresent();
+      apiFetch(`${API_URL}/api/me`, { credentials: "include" })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (d?.demo) setIsDemo(true);
+          setIsConnected(d?.connected ?? false);
+        })
+        .catch(() => { setIsConnected(false); });
+    }
+    loadSession();
   }, []);
 
   // Close drawer on route change
