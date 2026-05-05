@@ -197,7 +197,7 @@ export default function Navbar() {
                 </Link>
               ))}
 
-              {(isDemo || isConnected === false) && (
+              {(isDemo || !isConnected) && (
                 <>
                   <div style={{ width: "1px", height: 18, background: "var(--border)", margin: "0 0.25rem" }} aria-hidden="true" />
                   <a
