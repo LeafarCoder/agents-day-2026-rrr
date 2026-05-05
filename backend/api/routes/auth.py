@@ -11,10 +11,12 @@ from config import CREDENTIALS_FILE, FRONTEND_URL, GOOGLE_CREDENTIALS_ERROR, GOO
 from gmail.auth import credentials_from_session, make_flow, save_credentials_to_session, DEMO_USER_EMAIL
 from db import reader, writer
 import db.reader as db_reader
+from api.deps import is_demo_request, get_demo_email
 
 
 def _redirect_uri(request: Request) -> str:
     return GOOGLE_REDIRECT_URI or str(request.url_for("oauth_callback"))
+
 
 router = APIRouter()
 
@@ -22,17 +24,19 @@ router = APIRouter()
 @router.get("/api/me")
 def me(request: Request):
     today = date.today()
-    is_demo = bool(request.session.get("demo"))
 
-    if is_demo:
-        profile_data = reader.get_profile(DEMO_USER_EMAIL)
+    # Bearer token (localStorage) takes priority over session cookie so Chrome's
+    # third-party cookie blocking doesn't break the demo flow.
+    if is_demo_request(request):
+        demo_email = get_demo_email(request)
+        profile_data = reader.get_profile(demo_email)
         user_row = (profile_data or {}).get("user") or {}
         return {
             "connected":          True,
             "demo":               True,
             "has_openrouter_key": False,
             "has_seen_tour":      True,
-            "user_email":         DEMO_USER_EMAIL,
+            "user_email":         demo_email,
             "display_name":       user_row.get("display_name"),
             "home_city":          user_row.get("home_city"),
             "home_country":       user_row.get("home_country"),

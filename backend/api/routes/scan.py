@@ -19,6 +19,7 @@ import db.writer as writer
 import db.reader as reader
 from config import LLM_CONCURRENCY
 from detection.config import BLOCKED_DOMAINS
+from api.deps import is_demo_request
 
 log    = get("scan")
 router = APIRouter()
@@ -102,7 +103,7 @@ async def scan_stream(
         from googleapiclient.discovery import build
 
         try:
-            if request.session.get("demo"):
+            if is_demo_request(request):
                 yield _event("error", "Scanning is disabled in demo mode.")
                 return
 

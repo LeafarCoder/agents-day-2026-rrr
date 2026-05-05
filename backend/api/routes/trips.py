@@ -8,15 +8,13 @@ from pydantic import BaseModel
 
 import db.writer as writer
 import db.reader as reader
+from api.deps import is_demo_request, get_user_email
 
 router = APIRouter(prefix="/api/trips")
 
 
 def _user_email(request: Request) -> str | None:
-    if request.session.get("demo"):
-        from gmail.auth import DEMO_USER_EMAIL
-        return DEMO_USER_EMAIL
-    return request.session.get("user_email")
+    return get_user_email(request)
 
 
 def _user_id(user_email: str) -> str | None:
@@ -73,7 +71,7 @@ class TripPatch(BaseModel):
 
 @router.patch("/{trip_id}")
 def patch_trip(trip_id: str, payload: TripPatch, request: Request):
-    if request.session.get("demo"):
+    if is_demo_request(request):
         return JSONResponse({"error": "demo_mode_read_only"}, status_code=403)
     email = request.session.get("user_email")
     if not email:
@@ -106,7 +104,7 @@ class MergePayload(BaseModel):
 
 @router.post("/merge")
 def merge_trips_route(payload: MergePayload, request: Request):
-    if request.session.get("demo"):
+    if is_demo_request(request):
         return JSONResponse({"error": "demo_mode_read_only"}, status_code=403)
     email = request.session.get("user_email")
     if not email:

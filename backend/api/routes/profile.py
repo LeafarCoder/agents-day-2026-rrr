@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from config import FRONTEND_URL
 from gmail.auth import credentials_from_session, get_current_user_email
 from observability.logger import get
+from api.deps import is_demo_request
 
 log = get("api.profile")
 router = APIRouter()
@@ -27,7 +28,7 @@ async def build_taste_profile(request: Request):
       msgvault hybrid search → MiniMax extraction → Ollama embedding → Supabase
     Requires msgvault to be installed and synced on the server.
     """
-    if request.session.get("demo"):
+    if is_demo_request(request):
         return JSONResponse({"error": "demo_mode_read_only"}, status_code=403)
 
     creds = credentials_from_session(request.session)

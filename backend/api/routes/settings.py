@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 import db.writer as writer
+from api.deps import is_demo_request
 
 router = APIRouter(prefix="/api/settings")
 
@@ -27,7 +28,7 @@ class ExcludedLabelsPayload(BaseModel):
 
 @router.patch("/profile")
 def save_profile(payload: ProfilePayload, request: Request):
-    if request.session.get("demo"):
+    if is_demo_request(request):
         return JSONResponse({"error": "demo_mode_read_only"}, status_code=403)
 
     user_email = request.session.get("user_email")
@@ -66,7 +67,7 @@ def get_openrouter_key(request: Request):
 
 @router.post("/openrouter-key")
 def save_openrouter_key(payload: KeyPayload, request: Request):
-    if request.session.get("demo"):
+    if is_demo_request(request):
         return JSONResponse({"error": "demo_mode_read_only"}, status_code=403)
 
     user_email = request.session.get("user_email")
@@ -97,7 +98,7 @@ def save_openrouter_key(payload: KeyPayload, request: Request):
 
 @router.delete("/openrouter-key")
 def delete_openrouter_key(request: Request):
-    if request.session.get("demo"):
+    if is_demo_request(request):
         return JSONResponse({"error": "demo_mode_read_only"}, status_code=403)
 
     user_email = request.session.get("user_email")
@@ -110,7 +111,7 @@ def delete_openrouter_key(request: Request):
 
 @router.post("/tour-complete")
 def tour_complete(request: Request):
-    if request.session.get("demo"):
+    if is_demo_request(request):
         return JSONResponse({"error": "demo_mode_read_only"}, status_code=403)
 
     user_email = request.session.get("user_email")
@@ -135,7 +136,7 @@ def get_excluded_labels(request: Request):
 
 @router.put("/excluded-labels")
 def put_excluded_labels(payload: ExcludedLabelsPayload, request: Request):
-    if request.session.get("demo"):
+    if is_demo_request(request):
         return JSONResponse({"error": "demo_mode_read_only"}, status_code=403)
     user_email = request.session.get("user_email")
     if not user_email:
@@ -147,7 +148,7 @@ def put_excluded_labels(payload: ExcludedLabelsPayload, request: Request):
 
 @router.post("/tour-reset")
 def tour_reset(request: Request):
-    if request.session.get("demo"):
+    if is_demo_request(request):
         return JSONResponse({"error": "demo_mode_read_only"}, status_code=403)
 
     user_email = request.session.get("user_email")

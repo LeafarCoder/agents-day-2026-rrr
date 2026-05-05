@@ -3,15 +3,15 @@ from __future__ import annotations
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import JSONResponse
 
-from gmail.auth import get_current_user_email
 from detection.config import _DEFAULT_ACTIVITY_SIGNALS
 import db.reader as reader
+from api.deps import is_demo_request, get_user_email
 
 router = APIRouter(prefix="/api/preferences")
 
 
 def _require_user(request: Request):
-    user_email = get_current_user_email(request.session)
+    user_email = get_user_email(request)
     if not user_email:
         return None, JSONResponse({"error": "not_authenticated"}, status_code=401)
     return user_email, None
@@ -35,7 +35,7 @@ def _get_category_id(db, user_id: str, category: str) -> str | None:
 
 @router.get("")
 def preferences(request: Request):
-    user_email = get_current_user_email(request.session)
+    user_email = get_user_email(request)
     if not user_email:
         return JSONResponse({"error": "not_authenticated"}, status_code=401)
     return {
@@ -46,7 +46,7 @@ def preferences(request: Request):
 
 @router.post("/categories")
 def create_category(request: Request, name: str = Form(...)):
-    if request.session.get("demo"):
+    if is_demo_request(request):
         return JSONResponse({"error": "demo_mode_read_only"}, status_code=403)
     user_email, err = _require_user(request)
     if err:
@@ -70,7 +70,7 @@ def create_category(request: Request, name: str = Form(...)):
 
 @router.delete("/categories/{name}")
 def delete_category(name: str, request: Request):
-    if request.session.get("demo"):
+    if is_demo_request(request):
         return JSONResponse({"error": "demo_mode_read_only"}, status_code=403)
     user_email, err = _require_user(request)
     if err:
@@ -88,7 +88,7 @@ def delete_category(name: str, request: Request):
 
 @router.post("/keywords")
 def create_keyword(request: Request, category: str = Form(...), keyword: str = Form(...)):
-    if request.session.get("demo"):
+    if is_demo_request(request):
         return JSONResponse({"error": "demo_mode_read_only"}, status_code=403)
     user_email, err = _require_user(request)
     if err:
@@ -122,7 +122,7 @@ def delete_keyword(
     category: str = Query(...),
     keyword:  str = Query(...),
 ):
-    if request.session.get("demo"):
+    if is_demo_request(request):
         return JSONResponse({"error": "demo_mode_read_only"}, status_code=403)
     user_email, err = _require_user(request)
     if err:
