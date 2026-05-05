@@ -25,6 +25,14 @@ export default function Navbar() {
 
   useEffect(() => {
     async function loadSession() {
+      // Avoid flashing "signed out" while demo token exchange is in progress elsewhere.
+      try {
+        const hasTokenInUrl = new URL(window.location.href).searchParams.has('demo_token');
+        const hasStoredToken = !!localStorage.getItem('session_token');
+        if (hasTokenInUrl || hasStoredToken) {
+          setIsConnected(true);
+        }
+      } catch {}
       await exchangeDemoTokenIfPresent();
       apiFetch(`${API_URL}/api/me`, { credentials: "include" })
         .then(r => r.ok ? r.json() : null)
@@ -35,6 +43,10 @@ export default function Navbar() {
         .catch(() => { setIsConnected(false); });
     }
     loadSession();
+
+    const onAuthChanged = () => { loadSession(); };
+    window.addEventListener('demo-auth-changed', onAuthChanged);
+    return () => window.removeEventListener('demo-auth-changed', onAuthChanged);
   }, []);
 
   // Close drawer on route change
