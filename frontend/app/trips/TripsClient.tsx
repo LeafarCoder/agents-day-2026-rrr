@@ -307,7 +307,7 @@ export default function TripsPage() {
           Trips
         </h1>
         <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-          {trips.length} trip{trips.length !== 1 ? 's' : ''} found
+          Your journeys grouped by destination — edit dates, merge duplicates, and explore what each trip was about.
         </p>
       </div>
 

@@ -432,11 +432,11 @@ export default function DashboardPage() {
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
           Hello{me.display_name ? `, ${me.display_name}` : ''}
         </h1>
-        {me.home_city && me.home_country && (
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-            Based in {me.home_city}, {me.home_country}
-          </p>
-        )}
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+          {me.home_city && me.home_country
+            ? `Based in ${me.home_city}, ${me.home_country} · your travel DNA at a glance`
+            : 'Your travel DNA — countries visited, trips, and activity patterns at a glance.'}
+        </p>
       </div>
 
       {/* Stats */}
@@ -711,7 +711,7 @@ export default function DashboardPage() {
           </div>
 
           <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-            <Link href="/results" style={{ fontSize: '0.8rem', color: 'var(--text-accent)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            <Link href="/emails" style={{ fontSize: '0.8rem', color: 'var(--text-accent)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
               onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
               onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
             >

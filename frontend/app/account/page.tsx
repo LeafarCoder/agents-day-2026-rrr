@@ -297,11 +297,11 @@ export default function AccountPage() {
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.6rem, 4vw, 2rem)', fontWeight: 600, color: 'var(--text)', margin: '0 0 0.25rem' }}>
           Account
         </h1>
-        {isDemo && (
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
-            Read-only in demo mode. Sign in to manage your account.
-          </p>
-        )}
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+          {isDemo
+            ? 'Read-only in demo mode. Sign in to manage your account.'
+            : 'Manage your profile, API key, and Gmail scan preferences.'}
+        </p>
       </div>
 
       {/* Profile info card */}

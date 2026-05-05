@@ -13,7 +13,7 @@ import { useIsMobile } from "@/lib/useIsMobile";
 const NAV_LINKS = [
   { href: "/",        label: "Profile" },
   { href: "/trips",   label: "Trips"   },
-  { href: "/results", label: "Emails"  },
+  { href: "/emails",  label: "Emails"  },
 ] as const;
 
 export default function Navbar() {

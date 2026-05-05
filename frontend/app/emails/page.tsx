@@ -343,7 +343,7 @@ function ScanResultsContent() {
               : 'Scan your emails to see booking history here.'}
           </p>
           {isScanView
-            ? <Link href="/results" className="btn btn-ghost" style={{ fontSize: '0.82rem', marginRight: '0.75rem' }}>View all results</Link>
+            ? <Link href="/emails" className="btn btn-ghost" style={{ fontSize: '0.82rem', marginRight: '0.75rem' }}>View all emails</Link>
             : null}
           <Link href="/email-scan" className="btn btn-primary">Scan Emails</Link>
         </div>
@@ -359,17 +359,24 @@ function ScanResultsContent() {
       <div className="fade-up" style={{ marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
           {isScanView
-            ? <Link href="/results" style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                ← All results
+            ? <Link href="/emails" style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                ← All emails
               </Link>
             : <Link href="/" style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                 ← Profile
               </Link>}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '1rem', flexWrap: 'wrap' }}>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.8rem, 4vw, 2.5rem)', fontWeight: 600, color: 'var(--text)', margin: 0, lineHeight: 1.15 }}>
-            {isScanView ? 'Scan Results' : 'All Emails'}
-          </h1>
+          <div>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.8rem, 4vw, 2.5rem)', fontWeight: 600, color: 'var(--text)', margin: 0, lineHeight: 1.15 }}>
+              {isScanView ? 'Scan Results' : 'Emails'}
+            </h1>
+            {!isScanView && (
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '0.3rem 0 0' }}>
+                Every travel booking email detected in your Gmail inbox.
+              </p>
+            )}
+          </div>
           {profile?.last_scanned && !isScanView && (
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', flexShrink: 0 }}>
               Last scan {fmtDate(profile.last_scanned)}
@@ -410,12 +417,12 @@ function ScanResultsContent() {
             </Link>
             <span style={{ width: 1, height: 14, background: 'var(--border)' }} />
             <Link
-              href="/results"
+              href="/emails"
               style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
               onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
               onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
             >
-              View all results →
+              View all emails →
             </Link>
           </div>
         </div>
