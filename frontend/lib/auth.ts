@@ -12,6 +12,8 @@
 import { API_URL, apiFetch } from './api'
 
 const TOKEN_PARAM = 'demo_token'
+export const DEMO_AUTH_EVENT = 'demo-auth-changed'
+export const DEMO_AUTH_PENDING_KEY = 'demo_auth_pending'
 let exchangeInFlight: Promise<boolean> | null = null
 
 /**
@@ -23,11 +25,14 @@ export async function exchangeDemoTokenIfPresent(): Promise<boolean> {
   if (typeof window === 'undefined') return false
   if (exchangeInFlight) return exchangeInFlight
 
-  exchangeInFlight = (async () => {
-    const url = new URL(window.location.href)
-    const token = url.searchParams.get(TOKEN_PARAM)
+  const url = new URL(window.location.href)
+  const token = url.searchParams.get(TOKEN_PARAM)
 
-    if (!token) return false
+  if (!token) return false
+
+  try { localStorage.setItem(DEMO_AUTH_PENDING_KEY, '1') } catch {}
+
+  exchangeInFlight = (async () => {
 
     // Clear the token from URL immediately (before the fetch)
     url.searchParams.delete(TOKEN_PARAM)
@@ -47,7 +52,7 @@ export async function exchangeDemoTokenIfPresent(): Promise<boolean> {
         // If server returned an access token, persist it to localStorage
         if (typeof window !== 'undefined' && data && data.access_token) {
           try { localStorage.setItem('session_token', data.access_token) } catch {}
-          try { window.dispatchEvent(new CustomEvent('demo-auth-changed')) } catch {}
+          try { window.dispatchEvent(new CustomEvent(DEMO_AUTH_EVENT)) } catch {}
         }
         console.log('[auth] Demo token exchanged successfully')
         return true
@@ -60,6 +65,7 @@ export async function exchangeDemoTokenIfPresent(): Promise<boolean> {
       console.error('[auth] Demo token exchange error:', err)
       return false
     } finally {
+      try { localStorage.removeItem(DEMO_AUTH_PENDING_KEY) } catch {}
       exchangeInFlight = null
     }
   })()

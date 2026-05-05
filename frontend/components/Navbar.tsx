@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
 import { API_URL, apiFetch } from "@/lib/api";
-import { exchangeDemoTokenIfPresent } from "@/lib/auth";
+import { DEMO_AUTH_EVENT, DEMO_AUTH_PENDING_KEY, exchangeDemoTokenIfPresent } from "@/lib/auth";
 import { useIsMobile } from "@/lib/useIsMobile";
 
 const NAV_LINKS = [
@@ -24,29 +24,60 @@ export default function Navbar() {
   const pathname = usePathname();
 
   useEffect(() => {
-    async function loadSession() {
-      // Avoid flashing "signed out" while demo token exchange is in progress elsewhere.
+    let cancelled = false;
+    let retry: number | undefined;
+
+    async function loadSession(attempt = 0) {
       try {
         const hasTokenInUrl = new URL(window.location.href).searchParams.has('demo_token');
+        const isDemoPending = localStorage.getItem(DEMO_AUTH_PENDING_KEY) === '1';
         const hasStoredToken = !!localStorage.getItem('session_token');
-        if (hasTokenInUrl || hasStoredToken) {
+        if (hasTokenInUrl || isDemoPending || hasStoredToken) {
           setIsConnected(true);
         }
       } catch {}
+
       await exchangeDemoTokenIfPresent();
-      apiFetch(`${API_URL}/api/me`, { credentials: "include" })
-        .then(r => r.ok ? r.json() : null)
-        .then(d => {
-          if (d?.demo) setIsDemo(true);
-          setIsConnected(d?.connected ?? false);
-        })
-        .catch(() => { setIsConnected(false); });
+
+      try {
+        const r = await apiFetch(`${API_URL}/api/me`, { credentials: "include" });
+        const d = r.ok ? await r.json() : null;
+        if (cancelled) return;
+
+        if (d?.connected) {
+          setIsDemo(d?.demo ?? false);
+          setIsConnected(true);
+          return;
+        }
+
+        const shouldRetry = (() => {
+          try {
+            return localStorage.getItem(DEMO_AUTH_PENDING_KEY) === '1' || !!localStorage.getItem('session_token');
+          } catch {
+            return false;
+          }
+        })();
+
+        if (shouldRetry && attempt < 10) {
+          retry = window.setTimeout(() => loadSession(attempt + 1), 200);
+          return;
+        }
+
+        setIsDemo(false);
+        setIsConnected(false);
+      } catch {
+        if (!cancelled) setIsConnected(false);
+      }
     }
     loadSession();
 
     const onAuthChanged = () => { loadSession(); };
-    window.addEventListener('demo-auth-changed', onAuthChanged);
-    return () => window.removeEventListener('demo-auth-changed', onAuthChanged);
+    window.addEventListener(DEMO_AUTH_EVENT, onAuthChanged);
+    return () => {
+      cancelled = true;
+      if (retry) window.clearTimeout(retry);
+      window.removeEventListener(DEMO_AUTH_EVENT, onAuthChanged);
+    };
   }, []);
 
   // Close drawer on route change
