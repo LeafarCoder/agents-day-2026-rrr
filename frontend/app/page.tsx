@@ -11,10 +11,6 @@ import { TOUR_STEPS, getTourSeenCached, setTourSeenCached, postTourComplete } fr
 import { useIsMobile } from '@/lib/useIsMobile'
 import { exchangeAuthTokensIfPresent } from '@/lib/auth'
 
-// Client-only spinner (SVG + SMIL motion). Disabled on server to avoid SSR mismatch.
-const DNASpinner = dynamic(() => import('@/components/DNASpinner'), { ssr: false })
-
-
 const HERO_ADJECTIVES = [
   'restless',
   'curious',
@@ -62,6 +58,9 @@ function RotatingSubtitle() {
 }
 
 const WorldMap = dynamic(() => import('./components/WorldMap'), { ssr: false })
+
+// Lottie-based DNA loader (client-only)
+const LottieDnaLoader = dynamic(() => import('@/components/LottieDnaLoader'), { ssr: false })
 
 type KeywordPref = { keyword: string; count: number }
 type Preference = { total: number; keywords: KeywordPref[] }
@@ -258,12 +257,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <div>
-          {/* DNASpinner: a decorative helix + airplane loader */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <DNASpinner size={92} title="Loading profile…" />
-          </div>
-        </div>
+        <LottieDnaLoader size={120} />
       </div>
     )
   }
