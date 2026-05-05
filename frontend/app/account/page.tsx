@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { API_URL, apiFetch } from '@/lib/api'
+import { SESSION_MODE_KEY } from '@/lib/auth'
 import { postTourReset, setTourSeenCached } from '@/lib/tour'
 import { COUNTRIES } from '@/lib/countries'
 import { useIsMobile } from '@/lib/useIsMobile'
