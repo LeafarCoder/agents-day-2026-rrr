@@ -11,7 +11,8 @@
 
 import { API_URL, apiFetch } from './api'
 
-const TOKEN_PARAM = 'demo_token'
+const DEMO_TOKEN_PARAM = 'demo_token'
+const AUTH_TOKEN_PARAM = 'auth_token'
 export const DEMO_AUTH_EVENT = 'demo-auth-changed'
 export const DEMO_AUTH_PENDING_KEY = 'demo_auth_pending'
 export const SESSION_MODE_KEY = 'session_mode'
@@ -27,7 +28,7 @@ export async function exchangeDemoTokenIfPresent(): Promise<boolean> {
   if (exchangeInFlight) return exchangeInFlight
 
   const url = new URL(window.location.href)
-  const token = url.searchParams.get(TOKEN_PARAM)
+  const token = url.searchParams.get(DEMO_TOKEN_PARAM)
 
   if (!token) return false
 
@@ -36,7 +37,7 @@ export async function exchangeDemoTokenIfPresent(): Promise<boolean> {
   exchangeInFlight = (async () => {
 
     // Clear the token from URL immediately (before the fetch)
-    url.searchParams.delete(TOKEN_PARAM)
+    url.searchParams.delete(DEMO_TOKEN_PARAM)
     const cleanUrl = url.toString()
     window.history.replaceState({}, '', cleanUrl)
 
@@ -77,4 +78,35 @@ export async function exchangeDemoTokenIfPresent(): Promise<boolean> {
   })()
 
   return exchangeInFlight
+}
+
+/**
+ * Persist a first-party bearer token returned by the OAuth callback.
+ * This makes real sign-in work even when cross-site cookies are blocked.
+ */
+export function exchangeAuthTokenIfPresent(): boolean {
+  if (typeof window === 'undefined') return false
+
+  const url = new URL(window.location.href)
+  const token = url.searchParams.get(AUTH_TOKEN_PARAM)
+  if (!token) return false
+
+  url.searchParams.delete(AUTH_TOKEN_PARAM)
+  window.history.replaceState({}, '', url.toString())
+
+  try { localStorage.setItem('session_token', token) } catch {}
+  try { localStorage.setItem(SESSION_MODE_KEY, 'user') } catch {}
+  try {
+    window.dispatchEvent(new CustomEvent(DEMO_AUTH_EVENT, {
+      detail: { connected: true, demo: false },
+    }))
+  } catch {}
+
+  return true
+}
+
+export async function exchangeAuthTokensIfPresent(): Promise<boolean> {
+  const exchangedAuth = exchangeAuthTokenIfPresent()
+  const exchangedDemo = await exchangeDemoTokenIfPresent()
+  return exchangedAuth || exchangedDemo
 }

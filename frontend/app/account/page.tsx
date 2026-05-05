@@ -257,6 +257,8 @@ export default function AccountPage() {
     setShowDeleteConfirm(false)
     try {
       await apiFetch(`${API_URL}/api/me`, { method: 'DELETE', credentials: 'include' })
+      try { localStorage.removeItem('session_token') } catch {}
+      try { localStorage.removeItem(SESSION_MODE_KEY) } catch {}
       window.location.href = `${API_URL}/disconnect`
     } catch {
       setDeleting(false)

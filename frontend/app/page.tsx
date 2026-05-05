@@ -9,7 +9,7 @@ import TourOverlay from '@/components/TourOverlay'
 import OnboardingModal from '@/components/OnboardingModal'
 import { TOUR_STEPS, getTourSeenCached, setTourSeenCached, postTourComplete } from '@/lib/tour'
 import { useIsMobile } from '@/lib/useIsMobile'
-import { exchangeDemoTokenIfPresent } from '@/lib/auth'
+import { exchangeAuthTokensIfPresent } from '@/lib/auth'
 
 const HERO_ADJECTIVES = [
   'restless',
@@ -182,8 +182,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadMe() {
-      // Exchange demo token if present in URL (handles third-party cookie blocking)
-      await exchangeDemoTokenIfPresent()
+      // Exchange OAuth/demo URL tokens before checking the session.
+      await exchangeAuthTokensIfPresent()
       
       apiFetch(`${API_URL}/api/me`, { credentials: 'include' })
         .then(r => r.json())

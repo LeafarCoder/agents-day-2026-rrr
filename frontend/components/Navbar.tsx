@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
 import { API_URL, apiFetch } from "@/lib/api";
-import { DEMO_AUTH_EVENT, DEMO_AUTH_PENDING_KEY, SESSION_MODE_KEY, exchangeDemoTokenIfPresent } from "@/lib/auth";
+import { DEMO_AUTH_EVENT, DEMO_AUTH_PENDING_KEY, SESSION_MODE_KEY, exchangeAuthTokensIfPresent } from "@/lib/auth";
 import { useIsMobile } from "@/lib/useIsMobile";
 
 const NAV_LINKS = [
@@ -29,7 +29,8 @@ export default function Navbar() {
 
     async function loadSession(attempt = 0) {
       try {
-        const hasTokenInUrl = new URL(window.location.href).searchParams.has('demo_token');
+        const params = new URL(window.location.href).searchParams;
+        const hasTokenInUrl = params.has('demo_token') || params.has('auth_token');
         const isDemoPending = localStorage.getItem(DEMO_AUTH_PENDING_KEY) === '1';
         const hasStoredToken = !!localStorage.getItem('session_token');
         const isStoredDemo = localStorage.getItem(SESSION_MODE_KEY) === 'demo';
@@ -41,7 +42,7 @@ export default function Navbar() {
         }
       } catch {}
 
-      await exchangeDemoTokenIfPresent();
+      await exchangeAuthTokensIfPresent();
 
       try {
         const r = await apiFetch(`${API_URL}/api/me`, { credentials: "include" });
@@ -78,7 +79,7 @@ export default function Navbar() {
     const onAuthChanged = (event: Event) => {
       const detail = (event as CustomEvent<{ connected?: boolean; demo?: boolean }>).detail;
       if (detail?.connected) setIsConnected(true);
-      if (detail?.demo) setIsDemo(true);
+      if (typeof detail?.demo === 'boolean') setIsDemo(detail.demo);
       loadSession();
     };
     window.addEventListener(DEMO_AUTH_EVENT, onAuthChanged);

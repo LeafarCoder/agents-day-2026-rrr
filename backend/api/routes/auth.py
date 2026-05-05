@@ -134,13 +134,21 @@ def oauth_callback(request: Request):
     flow.fetch_token(authorization_response=auth_response)
     request.session.clear()  # Removes demo flag and stale OAuth state
     save_credentials_to_session(flow.credentials, request.session)
+    session_data = {"credentials": request.session.get("credentials")}
     try:
         service = build("gmail", "v1", credentials=flow.credentials)
         email = service.users().getProfile(userId="me").execute()["emailAddress"]
         request.session["user_email"] = email
+        session_data["user_email"] = email
     except Exception:
         pass
-    return RedirectResponse(FRONTEND_URL)
+
+    # Cross-site cookies are unreliable in private/strict browsing modes. Return
+    # an opaque server-side session token so the frontend can use Bearer auth.
+    from api.session_store import create_session
+    access_token = create_session(session_data)
+    sep = "&" if "?" in FRONTEND_URL else "?"
+    return RedirectResponse(f"{FRONTEND_URL}{sep}auth_token={access_token}")
 
 
 @router.get("/disconnect")
