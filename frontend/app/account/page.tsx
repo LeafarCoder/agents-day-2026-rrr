@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { API_URL, apiFetch } from '@/lib/api'
-import { SESSION_MODE_KEY } from '@/lib/auth'
 import { postTourReset, setTourSeenCached } from '@/lib/tour'
 import { COUNTRIES } from '@/lib/countries'
 import { useIsMobile } from '@/lib/useIsMobile'
@@ -791,34 +790,6 @@ export default function AccountPage() {
           {labelsError && <p style={{ fontSize: '0.8rem', color: '#f87171', margin: '0.5rem 0 0' }}>{labelsError}</p>}
         </div>
       )}
-
-      {/* Session card */}
-      <div className="fade-up d-500 glass-subtle" style={{ borderRadius: 'var(--radius-xl)', padding: '1.5rem', marginBottom: '1rem' }}>
-        <h2 style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '0 0 1rem' }}>
-          Session
-        </h2>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-          <p style={{ fontSize: '0.83rem', color: 'var(--text-muted)', margin: 0 }}>
-            {isDemo ? 'You are browsing in demo mode.' : 'Signed in as ' + (userEmail ?? '—')}
-          </p>
-          <button
-            onClick={async () => {
-              try {
-                await apiFetch(`${API_URL}/disconnect`, { method: 'GET' })
-              } catch (e) {
-                // ignore
-              }
-              try { localStorage.removeItem('session_token') } catch {}
-              try { localStorage.removeItem(SESSION_MODE_KEY) } catch {}
-              window.location.href = '/'
-            }}
-            className="btn btn-ghost"
-            style={{ fontSize: '0.82rem' }}
-          >
-            Log out
-          </button>
-        </div>
-      </div>
 
       {/* Danger zone */}
       {!isDemo && (

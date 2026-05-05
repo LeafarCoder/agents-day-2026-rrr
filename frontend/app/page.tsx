@@ -689,16 +689,19 @@ export default function DashboardPage() {
                     </div>
                   </button>
                   {isOpen && (
-                    <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: '0.6rem' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', paddingBottom: '0.75rem' }}>
                       {[...data.keywords].sort((a, b) => b.count - a.count).map(kw => (
-                        <div key={kw.keyword} style={{
-                          display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
-                          padding: '0.2rem 0.4rem', margin: '0 -0.4rem',
-                          borderRadius: 'var(--radius-sm)',
+                        <span key={kw.keyword} style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                          padding: '0.25rem 0.6rem',
+                          borderRadius: 'var(--radius-md)',
+                          background: 'var(--bg-subtle)',
+                          border: '1px solid var(--border)',
+                          fontSize: '0.75rem',
                         }}>
-                          <span style={{ fontSize: '0.78rem', color: 'var(--text)' }}>{kw.keyword}</span>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{kw.count}</span>
-                        </div>
+                          <span style={{ color: 'var(--text)' }}>{kw.keyword}</span>
+                          <span style={{ color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums', fontSize: '0.7rem' }}>{kw.count}</span>
+                        </span>
                       ))}
                     </div>
                   )}
@@ -712,7 +715,7 @@ export default function DashboardPage() {
               onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
               onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
             >
-              View full results
+              View all emails
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                 <path d="M2.5 6h7M6 2.5l3.5 3.5L6 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>

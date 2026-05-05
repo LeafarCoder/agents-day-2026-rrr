@@ -294,7 +294,7 @@ function ScanResultsContent() {
     })
   }, [allBookings, excludedIds, typeFilter, dateFilter, platformFilter])
 
-  if (connected === false) return <AuthGate page="Results" />
+  if (connected === false) return <AuthGate page="Emails" />
 
   /* ── Loading ──────────────────────────────────────────────────── */
   if (loading) {
@@ -368,7 +368,7 @@ function ScanResultsContent() {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '1rem', flexWrap: 'wrap' }}>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.8rem, 4vw, 2.5rem)', fontWeight: 600, color: 'var(--text)', margin: 0, lineHeight: 1.15 }}>
-            {isScanView ? 'Scan Results' : 'All Results'}
+            {isScanView ? 'Scan Results' : 'All Emails'}
           </h1>
           {profile?.last_scanned && !isScanView && (
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', flexShrink: 0 }}>
