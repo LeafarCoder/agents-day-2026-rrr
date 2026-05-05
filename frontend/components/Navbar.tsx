@@ -139,34 +139,32 @@ export default function Navbar() {
               aria-expanded={open}
               style={{
                 display: "flex",
-                flexDirection: "column",
+                alignItems: "center",
                 justifyContent: "center",
-                gap: "5px",
                 width: 36,
                 height: 36,
-                padding: "6px",
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
+                padding: 0,
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid var(--border)",
                 borderRadius: "var(--radius-md)",
+                cursor: "pointer",
+                color: "var(--text)",
+                transition: "background 150ms ease",
               }}
+              onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
+              onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
             >
-              {[0, 1, 2].map(i => (
-                <span
-                  key={i}
-                  style={{
-                    display: "block",
-                    height: 2,
-                    background: "var(--text-muted)",
-                    borderRadius: 1,
-                    transition: "transform 200ms ease, opacity 200ms ease",
-                    transformOrigin: "center",
-                    ...(open && i === 0 ? { transform: "translateY(7px) rotate(45deg)" } : {}),
-                    ...(open && i === 1 ? { opacity: 0 } : {}),
-                    ...(open && i === 2 ? { transform: "translateY(-7px) rotate(-45deg)" } : {}),
-                  }}
-                />
-              ))}
+              {open ? (
+                /* ✕ close icon */
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                  <path d="M4 4l10 10M14 4L4 14" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+                </svg>
+              ) : (
+                /* ☰ hamburger icon */
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                  <path d="M3 5h12M3 9h12M3 13h12" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+                </svg>
+              )}
             </button>
           ) : (
             /* ── Desktop nav links ── */
