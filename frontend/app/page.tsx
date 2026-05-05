@@ -9,6 +9,7 @@ import TourOverlay from '@/components/TourOverlay'
 import OnboardingModal from '@/components/OnboardingModal'
 import { TOUR_STEPS, getTourSeenCached, setTourSeenCached, postTourComplete } from '@/lib/tour'
 import { useIsMobile } from '@/lib/useIsMobile'
+import { exchangeDemoTokenIfPresent } from '@/lib/auth'
 
 const HERO_ADJECTIVES = [
   'restless',
@@ -180,20 +181,26 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    fetch(`${API_URL}/api/me`, { credentials: 'include' })
-      .then(r => r.json())
-      .then((data: MeResponse) => {
-        setMe(data)
-        if (data.connected && !data.demo) {
-          const isFirstTime = !data.display_name && !data.home_city && !data.home_country
-          if (isFirstTime) {
-            setShowOnboarding(true)
-          } else if (!data.has_openrouter_key) {
-            setShowKeyModal(true)
+    async function loadMe() {
+      // Exchange demo token if present in URL (handles third-party cookie blocking)
+      await exchangeDemoTokenIfPresent()
+      
+      fetch(`${API_URL}/api/me`, { credentials: 'include' })
+        .then(r => r.json())
+        .then((data: MeResponse) => {
+          setMe(data)
+          if (data.connected && !data.demo) {
+            const isFirstTime = !data.display_name && !data.home_city && !data.home_country
+            if (isFirstTime) {
+              setShowOnboarding(true)
+            } else if (!data.has_openrouter_key) {
+              setShowKeyModal(true)
+            }
           }
-        }
-      })
-      .finally(() => setLoading(false))
+        })
+        .finally(() => setLoading(false))
+    }
+    loadMe()
   }, [])
 
   useEffect(() => {
