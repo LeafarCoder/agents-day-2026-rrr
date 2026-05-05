@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
-import { API_URL } from '@/lib/api'
+import { API_URL, apiFetch } from '@/lib/api'
 import AuthGate from '@/components/AuthGate'
 import dynamic from 'next/dynamic'
 
@@ -87,8 +87,8 @@ export default function TripDetailPage() {
     setError('')
     try {
       const [tripRes, meRes] = await Promise.all([
-        fetch(`${API_URL}/api/trips/${tripId}`, { credentials: 'include' }),
-        fetch(`${API_URL}/api/me`, { credentials: 'include' }),
+        apiFetch(`${API_URL}/api/trips/${tripId}`, { credentials: 'include' }),
+        apiFetch(`${API_URL}/api/me`, { credentials: 'include' }),
       ])
       if (!tripRes.ok) {
         setError(tripRes.status === 404 ? 'Trip not found.' : 'Failed to load trip.')
@@ -136,7 +136,7 @@ export default function TripDetailPage() {
       const body: Record<string, unknown> = { title: editTitle.trim() || null }
       if (editStart) body.start_date = editStart
       if (editEnd)   body.end_date   = editEnd
-      const res = await fetch(`${API_URL}/api/trips/${trip.id}`, {
+      const res = await apiFetch(`${API_URL}/api/trips/${trip.id}`, {
         method: 'PATCH', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
